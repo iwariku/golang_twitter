@@ -1,0 +1,13 @@
+# OS
+.DS_Store
+
+# Air / build artifacts
+tmp/
+
+# Go build
+*.exe
+*.out
+
+# Editor
+.vscode/
+.idea/
