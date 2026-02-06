@@ -1,0 +1,16 @@
+CREATE TABLE users (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  mail VARCHAR(128) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  user_name VARCHAR(255),
+  phone_number VARCHAR(255) UNIQUE,
+  nick_name VARCHAR(255),
+  self_introduction VARCHAR(255),
+  place VARCHAR(255),
+  web_site VARCHAR(255),
+  date_of_birth DATE,
+  profile_image VARCHAR(255),
+  avatar_image VARCHAR(255),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+)

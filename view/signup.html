@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initihttps://kirara-code.net/HappinessChain/tasks#chapter-43al-scale=1.0"
+    />
+    <title>アカウント作成</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-400 flex items-center justify-center min-h-screen">
+    <div
+      class="relative bg-white border-gray-500 w-full max-w-lg rounded-2xl p-8"
+    >
+      <a
+        href="/"
+        class="absolute left-4 top-1 p-2 rounded-full hover:bg-gray-200 transition-colors text-xl"
+      >
+        ×
+      </a>
+
+      <img
+        src="/static/x-logo/logo-black.png"
+        alt="Xロゴ"
+        class="w-8 mx-auto mb-4"
+      />
+      <h2 class="text-3xl font-bold mb-10">アカウントを作成</h2>
+
+      <form id="signupForm" class="space-y-6">
+        <div class="relative">
+          <input
+            type="email"
+            id="mail"
+            required
+            class="w-full border border-gray-300 rounded p-4 focus:border-sky-500 outline-none transition-colors"
+            placeholder="メールアドレス"
+          />
+        </div>
+
+        <div class="relative">
+          <input
+            type="password"
+            id="password"
+            required
+            class="w-full border border-gray-300 rounded p-4 text-lg focus:border-sky-500 outline-none transition-colors"
+            placeholder="パスワード"
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-gray-400 font-bold py-3 rounded-full text-lg hover:bg-blue-400 transition-colors"
+        >
+          送信
+        </button>
+      </form>
+
+      <div id="message"></div>
+    </div>
+    <script>
+      document.getElementById('signupForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const mail = document.getElementById('mail').value;
+        const password = document.getElementById('password').value;
+
+        fetch('/signup', {
+          method: 'post',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mail, password }),
+        });
+      });
+    </script>
+  </body>
+</html>
