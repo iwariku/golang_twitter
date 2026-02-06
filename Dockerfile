@@ -7,6 +7,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 RUN go install github.com/air-verse/air@latest
+RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 
 COPY . .
 CMD ["air", "-c", ".air.toml"]

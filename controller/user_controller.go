@@ -1,0 +1,64 @@
+package controller
+
+import (
+	"golang_twitter/db"
+	"log"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// このuser.goではuserに関する処理を持つファイル
+// Signup
+// Login
+// Logout
+// GetUserProfile
+// UpdateUser
+
+type UserController struct {
+	Queries *db.Queries
+}
+
+// SignUpの流れ
+// UserController型のポインタを示す変数がSingUpというメソッドを持つ
+// SingUpメソッドは(c *gin.Context)を引数に取る。*gin.ContextはGinフレームワークがHTTPリクエストの時に自動的に作ってくれる
+// reqというサインアップに必要なプロパティを持つ変数を宣言
+// ShouldBindJSONで受け取ったJSONを使いreqを上書き。書き換える内容は、入力されたリクエスト(メールアドレスとパスワード)
+// パスワードが何文字以上？大文字、小文字等の要件を満たしているかをチェック
+// パスワードチェックに問題がなかったらハッシュ化
+// DBに登録する(CreateUserメソッドはsqlcで自動的に作成されたもの)
+func (uc *UserController) SignUp(c *gin.Context) {
+	var req SignUpRequest
+
+	// リクエスト情報などが詰まっている「c」からJSONを取り出して、reqという箱に詰め替える
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("メールアドレスの形式で入力してください: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "メールアドレスの形式で入力してください"})
+		return
+	}
+
+	if err := validatePassword(req.Password); err != nil {
+		log.Printf("バリデーションエラー: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := uc.Queries.CreateUser(c.Request.Context(), db.CreateUserParams{
+		Mail:     req.Mail,
+		Password: string(hashedPassword),
+	})
+	if err != nil {
+		log.Printf("入力されたメールアドレスがすでに使用されています: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "入力されたメールアドレスがすでに使用されています"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, user)
+}
