@@ -11,6 +11,9 @@ CREATE TABLE users (
   date_of_birth DATE,
   profile_image VARCHAR(255),
   avatar_image VARCHAR(255),
+  is_active BOOLEAN DEFAULT false,
+  activation_token VARCHAR(255) UNIQUE,
+  activated_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 )

@@ -33,6 +33,6 @@ func main() {
 	})
 
 	r.POST("/signup", uc.SignUp)
-
+	r.GET("/activate", uc.Activate)
 	r.Run()
 }

@@ -7,25 +7,47 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const activateUser = `-- name: ActivateUser :exec
+UPDATE users
+SET is_active = true, activation_token = NULL, activated_at = CURRENT_TIMESTAMP
+WHERE activation_token = $1
+`
+
+func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text) error {
+	_, err := q.db.Exec(ctx, activateUser, activationToken)
+	return err
+}
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   mail,
-  password
+  password,
+  is_active,
+  activation_token
 ) VALUES (
-  $1, $2
+  $1, $2, $3, $4
 )
-RETURNING id, mail, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, created_at, updated_at
+RETURNING id, mail, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, is_active, activation_token, activated_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Mail     string `json:"mail"`
-	Password string `json:"password"`
+	Mail            string      `json:"mail"`
+	Password        string      `json:"password"`
+	IsActive        pgtype.Bool `json:"is_active"`
+	ActivationToken pgtype.Text `json:"activation_token"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Mail, arg.Password)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Mail,
+		arg.Password,
+		arg.IsActive,
+		arg.ActivationToken,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -40,6 +62,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.DateOfBirth,
 		&i.ProfileImage,
 		&i.AvatarImage,
+		&i.IsActive,
+		&i.ActivationToken,
+		&i.ActivatedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

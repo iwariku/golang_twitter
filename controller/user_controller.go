@@ -2,10 +2,13 @@ package controller
 
 import (
 	"golang_twitter/db"
+	"golang_twitter/services/auth"
+	"golang_twitter/utils"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -50,13 +53,29 @@ func (uc *UserController) SignUp(c *gin.Context) {
 		return
 	}
 
+	token, err := utils.GenerateToken()
+	if err != nil {
+		log.Printf("トークン生成失敗: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "サーバー内部でエラーが発生"})
+		return
+	}
+
 	user, err := uc.Queries.CreateUser(c.Request.Context(), db.CreateUserParams{
-		Mail:     req.Mail,
-		Password: string(hashedPassword),
+		Mail:            req.Mail,
+		Password:        string(hashedPassword),
+		IsActive:        pgtype.Bool{Bool: false, Valid: true},
+		ActivationToken: pgtype.Text{String: token, Valid: true},
 	})
 	if err != nil {
 		log.Printf("入力されたメールアドレスがすでに使用されています: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "入力されたメールアドレスがすでに使用されています"})
+		return
+	}
+
+	err = auth.SendActivationEmail(user.Mail, token)
+	if err != nil {
+		log.Printf("メールの送信に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "メールの送信に失敗しました"})
 		return
 	}
 
