@@ -7,6 +7,7 @@ services:
       POSTGRES_DB: twitter_db
       APP_URL: http://localhost:8080
       SMTP_ADDRESS: mailcatcher:1025
+      MAIL_FROM: noreply@example.com
     ports:
       - '8080:8080'
     volumes:
