@@ -70,3 +70,28 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	)
 	return i, err
 }
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, mail, password, is_active
+FROM users
+WHERE mail = $1
+`
+
+type GetUserByEmailRow struct {
+	ID       int32       `json:"id"`
+	Mail     string      `json:"mail"`
+	Password string      `json:"password"`
+	IsActive pgtype.Bool `json:"is_active"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, mail string) (GetUserByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, mail)
+	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Mail,
+		&i.Password,
+		&i.IsActive,
+	)
+	return i, err
+}

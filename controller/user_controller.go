@@ -6,9 +6,13 @@ import (
 	"golang_twitter/utils"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,6 +26,7 @@ import (
 type UserController struct {
 	Queries *db.Queries
 	Mailer  auth.MailerInterface
+	Redis   *redis.Client
 }
 
 // SignUpの流れ
@@ -33,7 +38,7 @@ type UserController struct {
 // パスワードチェックに問題がなかったらハッシュ化
 // DBに登録する(CreateUserメソッドはsqlcで自動的に作成されたもの)
 func (uc *UserController) SignUp(c *gin.Context) {
-	var req SignUpRequest
+	var req AuthRequest
 
 	// リクエスト情報などが詰まっている「c」からJSONを取り出して、reqという箱に詰め替える
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -98,4 +103,48 @@ func (uc *UserController) Activate(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "アカウントが有効になりました。ログインが可能な状態です。"})
+}
+
+func (uc *UserController) Login(c *gin.Context) {
+	var req AuthRequest
+	loginError := gin.H{"error": "メールアドレスまたはパスワードが正しくありません"}
+
+	// signupの時とloginの時のエラーメッセージが違う。やっていることは一緒なのに。Loginに関してはむしろエラーメッセージを描かない方がいい？
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusUnauthorized, loginError)
+		return
+	}
+
+	user, err := uc.Queries.GetUserByEmail(c, req.Mail)
+	if err != nil {
+		log.Printf("ログイン失敗(ユーザー不在): %v", err)
+		c.JSON(http.StatusUnauthorized, loginError)
+		return
+	}
+
+	if !user.IsActive.Bool {
+		log.Printf("アカウントが有効化されていません")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "アカウントが有効化されていません"})
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	if err != nil {
+		log.Printf("ログイン失敗(パスワード不一致): %v", err)
+		c.JSON(http.StatusUnauthorized, loginError)
+		return
+	}
+
+	sessionID := uuid.New().String()
+	err = uc.Redis.Set(c, sessionID, strconv.Itoa(int(user.ID)), 24*time.Hour).Err()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "セッションの作成に失敗しました"})
+		return
+	}
+
+	maxAge := 60 * 60 * 24
+
+	c.SetCookie("session_id", sessionID, maxAge, "/", "localhost", false, true)
+
+	c.JSON(http.StatusOK, gin.H{"message": "ログインに成功しました"})
 }
