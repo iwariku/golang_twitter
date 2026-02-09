@@ -5,6 +5,9 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
       POSTGRES_DB: twitter_db
+      APP_URL: http://localhost:8080
+      SMTP_ADDRESS: mailcatcher:1025
+      MAIL_FROM: noreply@example.com
     ports:
       - '8080:8080'
     volumes:
@@ -12,6 +15,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  mailcatcher:
+    image: schickling/mailcatcher
+    ports:
+      - '1080:1080'
+      - '1025:1025'
   postgres:
     image: postgres:14
     container_name: postgres

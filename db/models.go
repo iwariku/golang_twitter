@@ -21,6 +21,9 @@ type User struct {
 	DateOfBirth      pgtype.Date      `json:"date_of_birth"`
 	ProfileImage     pgtype.Text      `json:"profile_image"`
 	AvatarImage      pgtype.Text      `json:"avatar_image"`
+	IsActive         pgtype.Bool      `json:"is_active"`
+	ActivationToken  pgtype.Text      `json:"activation_token"`
+	ActivatedAt      pgtype.Timestamp `json:"activated_at"`
 	CreatedAt        pgtype.Timestamp `json:"created_at"`
 	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
 }

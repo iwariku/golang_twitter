@@ -4,6 +4,7 @@ import (
 	"context"
 	"golang_twitter/controller"
 	"golang_twitter/db"
+	"golang_twitter/services/auth"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +16,8 @@ func main() {
 	conn, queries := db.ConnectDB(ctx)
 	defer conn.Close(ctx)
 
-	uc := &controller.UserController{Queries: queries}
+	mailer := auth.NewMailer()
+	uc := &controller.UserController{Queries: queries, Mailer: mailer}
 
 	r := gin.Default()
 	r.LoadHTMLGlob("view/*")
@@ -33,6 +35,6 @@ func main() {
 	})
 
 	r.POST("/signup", uc.SignUp)
-
+	r.GET("/activate", uc.Activate)
 	r.Run()
 }
