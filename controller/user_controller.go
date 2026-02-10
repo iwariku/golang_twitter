@@ -147,4 +147,5 @@ func (uc *UserController) Login(c *gin.Context) {
 	c.SetCookie("session_id", sessionID, maxAge, "/", "localhost", false, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "ログインに成功しました"})
+	log.Printf("ログインできました")
 }

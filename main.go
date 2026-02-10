@@ -35,9 +35,13 @@ func main() {
 	r.GET("/signup", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "signup.html", nil)
 	})
-
 	r.POST("/signup", uc.SignUp)
+
+	r.GET("/login", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", nil)
+	})
 	r.POST("/login", uc.Login)
+
 	r.GET("/activate", uc.Activate)
 	r.Run()
 }
