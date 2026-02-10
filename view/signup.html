@@ -31,7 +31,7 @@
         <div class="relative">
           <input
             type="email"
-            id="mail"
+            id="email"
             required
             class="w-full border border-gray-300 rounded p-4 focus:border-sky-500 outline-none transition-colors"
             placeholder="メールアドレス"
@@ -62,13 +62,13 @@
       document.getElementById('signupForm').addEventListener('submit', (e) => {
         e.preventDefault();
 
-        const mail = document.getElementById('mail').value;
+        const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
 
         fetch('/signup', {
           method: 'post',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mail, password }),
+          body: JSON.stringify({ email, password }),
         });
       });
     </script>

@@ -10,7 +10,7 @@ import (
 
 type User struct {
 	ID               int32            `json:"id"`
-	Mail             string           `json:"mail"`
+	Email            string           `json:"email"`
 	Password         string           `json:"password"`
 	UserName         pgtype.Text      `json:"user_name"`
 	PhoneNumber      pgtype.Text      `json:"phone_number"`

@@ -67,7 +67,7 @@ func (uc *UserController) SignUp(c *gin.Context) {
 	}
 
 	user, err := uc.Queries.CreateUser(c.Request.Context(), db.CreateUserParams{
-		Mail:            req.Mail,
+		Email:           req.Email,
 		Password:        string(hashedPassword),
 		IsActive:        pgtype.Bool{Bool: false, Valid: true},
 		ActivationToken: pgtype.Text{String: token, Valid: true},
@@ -78,7 +78,7 @@ func (uc *UserController) SignUp(c *gin.Context) {
 		return
 	}
 
-	err = uc.Mailer.SendActivationEmail(user.Mail, token)
+	err = uc.Mailer.SendActivationEmail(user.Email, token)
 	if err != nil {
 		log.Printf("メールの送信に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "メールの送信に失敗しました"})
@@ -115,7 +115,7 @@ func (uc *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := uc.Queries.GetUserByEmail(c, req.Mail)
+	user, err := uc.Queries.GetUserByEmail(c, req.Email)
 	if err != nil {
 		log.Printf("ログイン失敗(ユーザー不在): %v", err)
 		c.JSON(http.StatusUnauthorized, loginError)
