@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Tweet struct {
+	ID        int32            `json:"id"`
+	UserID    int32            `json:"user_id"`
+	Content   string           `json:"content"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
 type User struct {
 	ID               int32            `json:"id"`
 	Mail             string           `json:"mail"`

@@ -18,6 +18,7 @@ func main() {
 
 	mailer := auth.NewMailer()
 	uc := &controller.UserController{Queries: queries, Mailer: mailer}
+	tc := &controller.TweetController{Queries: queries}
 
 	r := gin.Default()
 	r.LoadHTMLGlob("view/*")
@@ -36,5 +37,7 @@ func main() {
 
 	r.POST("/signup", uc.SignUp)
 	r.GET("/activate", uc.Activate)
+
+	r.POST("/tweets", tc.TweetPost)
 	r.Run()
 }

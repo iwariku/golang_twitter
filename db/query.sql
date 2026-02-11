@@ -13,3 +13,12 @@ RETURNING *;
 UPDATE users
 SET is_active = true, activation_token = NULL, activated_at = CURRENT_TIMESTAMP
 WHERE activation_token = $1;
+
+-- name: CreateTweet :one
+INSERT INTO tweets (
+  user_id,
+  content
+) VALUES (
+  $1, $2
+)
+RETURNING *;
