@@ -40,10 +40,10 @@ type UserController struct {
 func (uc *UserController) SignUp(c *gin.Context) {
 	var req AuthRequest
 
-	// リクエスト情報などが詰まっている「c」からJSONを取り出して、reqという箱に詰め替える
+	// JSON形式のリクエストボディをGoの構造体に変換している
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("メールアドレスの形式で入力してください: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "メールアドレスの形式で入力してください"})
+		log.Printf("JSON形式のリクエストが違います: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON形式のリクエストが違います"})
 		return
 	}
 
@@ -109,15 +109,15 @@ func (uc *UserController) Login(c *gin.Context) {
 	var req AuthRequest
 	loginError := gin.H{"error": "メールアドレスまたはパスワードが正しくありません"}
 
-	// signupの時とloginの時のエラーメッセージが違う。やっていることは一緒なのに。Loginに関してはむしろエラーメッセージを描かない方がいい？
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusUnauthorized, loginError)
+		log.Printf("JSON形式のリクエストが違います: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON形式のリクエストが違います"})
 		return
 	}
 
 	user, err := uc.Queries.GetUserByEmail(c, req.Email)
 	if err != nil {
-		log.Printf("ログイン失敗(ユーザー不在): %v", err)
+		log.Printf("ログイン失敗(ユーザーまたはパスワードが正しくありません): %v", err)
 		c.JSON(http.StatusUnauthorized, loginError)
 		return
 	}
@@ -130,7 +130,7 @@ func (uc *UserController) Login(c *gin.Context) {
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		log.Printf("ログイン失敗(パスワード不一致): %v", err)
+		log.Printf("ログイン失敗(ユーザーまたはパスワードが正しくありません): %v", err)
 		c.JSON(http.StatusUnauthorized, loginError)
 		return
 	}
