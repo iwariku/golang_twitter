@@ -23,7 +23,7 @@
       <div class="flex px-4 pb-4">
         <div class="flex-shrink-0 mr-3">
           <div class="w-10 h-10 bg-gray-300 rounded-full overflow-hidden">
-            <img src="https://via.placeholder.com/40" alt="avatar" />
+            <img src="../static/x-logo/acount-log.png" alt="avatar" />
           </div>
         </div>
 
@@ -52,5 +52,19 @@
         </form>
       </div>
     </div>
+
+    <script>
+      document.getElementById('tweet-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const textValue = document.getElementById('tweet-content').value;
+
+        fetch('/post', {
+          method: 'post',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: textValue }),
+        });
+      });
+    </script>
   </body>
 </html>

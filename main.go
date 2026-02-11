@@ -38,6 +38,10 @@ func main() {
 	r.POST("/signup", uc.SignUp)
 	r.GET("/activate", uc.Activate)
 
-	r.POST("/tweets", tc.TweetPost)
+	r.GET("/post", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "post.html", nil)
+	})
+	r.POST("/post", tc.TweetPost)
+
 	r.Run()
 }
