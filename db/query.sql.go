@@ -24,18 +24,18 @@ func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text)
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-  mail,
+  email,
   password,
   is_active,
   activation_token
 ) VALUES (
   $1, $2, $3, $4
 )
-RETURNING id, mail, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, is_active, activation_token, activated_at, created_at, updated_at
+RETURNING id, email, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, is_active, activation_token, activated_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Mail            string      `json:"mail"`
+	Email           string      `json:"email"`
 	Password        string      `json:"password"`
 	IsActive        pgtype.Bool `json:"is_active"`
 	ActivationToken pgtype.Text `json:"activation_token"`
@@ -43,7 +43,7 @@ type CreateUserParams struct {
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
-		arg.Mail,
+		arg.Email,
 		arg.Password,
 		arg.IsActive,
 		arg.ActivationToken,
@@ -51,7 +51,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Mail,
+		&i.Email,
 		&i.Password,
 		&i.UserName,
 		&i.PhoneNumber,
@@ -67,6 +67,31 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.ActivatedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, password, is_active
+FROM users
+WHERE email = $1
+`
+
+type GetUserByEmailRow struct {
+	ID       int32       `json:"id"`
+	Email    string      `json:"email"`
+	Password string      `json:"password"`
+	IsActive pgtype.Bool `json:"is_active"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Password,
+		&i.IsActive,
 	)
 	return i, err
 }

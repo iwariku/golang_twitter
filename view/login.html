@@ -2,10 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initihttps://kirara-code.net/HappinessChain/tasks#chapter-43al-scale=1.0"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>アカウント作成</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
@@ -25,9 +22,9 @@
         alt="Xロゴ"
         class="w-8 mx-auto mb-4"
       />
-      <h2 class="text-3xl font-bold mb-10">アカウントを作成</h2>
+      <h2 class="text-3xl font-bold mb-10">Xにログイン</h2>
 
-      <form id="signupForm" class="space-y-6">
+      <form id="loginForm" class="space-y-6">
         <div class="relative">
           <input
             type="email"
@@ -52,20 +49,18 @@
           type="submit"
           class="w-full bg-gray-400 font-bold py-3 rounded-full text-lg hover:bg-blue-400 transition-colors"
         >
-          送信
+          ログイン
         </button>
       </form>
-
-      <div id="message"></div>
     </div>
     <script>
-      document.getElementById('signupForm').addEventListener('submit', (e) => {
+      document.getElementById('loginForm').addEventListener('submit', (e) => {
         e.preventDefault();
 
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
 
-        fetch('/signup', {
+        fetch('/login', {
           method: 'post',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),

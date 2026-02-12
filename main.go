@@ -4,6 +4,7 @@ import (
 	"context"
 	"golang_twitter/controller"
 	"golang_twitter/db"
+	"golang_twitter/infrastructure"
 	"golang_twitter/services/auth"
 	"net/http"
 
@@ -17,7 +18,8 @@ func main() {
 	defer conn.Close(ctx)
 
 	mailer := auth.NewMailer()
-	uc := &controller.UserController{Queries: queries, Mailer: mailer}
+	redisClient := infrastructure.NewRedisClient()
+	uc := &controller.UserController{Queries: queries, Mailer: mailer, Redis: redisClient}
 
 	r := gin.Default()
 	r.LoadHTMLGlob("view/*")
@@ -33,8 +35,13 @@ func main() {
 	r.GET("/signup", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "signup.html", nil)
 	})
-
 	r.POST("/signup", uc.SignUp)
+
+	r.GET("/login", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", nil)
+	})
+	r.POST("/login", uc.Login)
+
 	r.GET("/activate", uc.Activate)
 	r.Run()
 }
