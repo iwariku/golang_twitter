@@ -6,9 +6,13 @@ import (
 	"golang_twitter/utils"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,6 +26,7 @@ import (
 type UserController struct {
 	Queries *db.Queries
 	Mailer  auth.MailerInterface
+	Redis   *redis.Client
 }
 
 // SignUpの流れ
@@ -33,12 +38,12 @@ type UserController struct {
 // パスワードチェックに問題がなかったらハッシュ化
 // DBに登録する(CreateUserメソッドはsqlcで自動的に作成されたもの)
 func (uc *UserController) SignUp(c *gin.Context) {
-	var req SignUpRequest
+	var req AuthRequest
 
-	// リクエスト情報などが詰まっている「c」からJSONを取り出して、reqという箱に詰め替える
+	// JSON形式のリクエストボディをGoの構造体に変換している
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("メールアドレスの形式で入力してください: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "メールアドレスの形式で入力してください"})
+		log.Printf("JSON形式のリクエストが違います: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON形式のリクエストが違います"})
 		return
 	}
 
@@ -62,7 +67,7 @@ func (uc *UserController) SignUp(c *gin.Context) {
 	}
 
 	user, err := uc.Queries.CreateUser(c.Request.Context(), db.CreateUserParams{
-		Mail:            req.Mail,
+		Email:           req.Email,
 		Password:        string(hashedPassword),
 		IsActive:        pgtype.Bool{Bool: false, Valid: true},
 		ActivationToken: pgtype.Text{String: token, Valid: true},
@@ -73,7 +78,7 @@ func (uc *UserController) SignUp(c *gin.Context) {
 		return
 	}
 
-	err = uc.Mailer.SendActivationEmail(user.Mail, token)
+	err = uc.Mailer.SendActivationEmail(user.Email, token)
 	if err != nil {
 		log.Printf("メールの送信に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "メールの送信に失敗しました"})
@@ -98,4 +103,49 @@ func (uc *UserController) Activate(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "アカウントが有効になりました。ログインが可能な状態です。"})
+}
+
+func (uc *UserController) Login(c *gin.Context) {
+	var req AuthRequest
+	loginError := gin.H{"error": "メールアドレスまたはパスワードが正しくありません"}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("JSON形式のリクエストが違います: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON形式のリクエストが違います"})
+		return
+	}
+
+	user, err := uc.Queries.GetUserByEmail(c, req.Email)
+	if err != nil {
+		log.Printf("ログイン失敗(ユーザーまたはパスワードが正しくありません): %v", err)
+		c.JSON(http.StatusUnauthorized, loginError)
+		return
+	}
+
+	if !user.IsActive.Bool {
+		log.Printf("アカウントが有効化されていません")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "アカウントが有効化されていません"})
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	if err != nil {
+		log.Printf("ログイン失敗(ユーザーまたはパスワードが正しくありません): %v", err)
+		c.JSON(http.StatusUnauthorized, loginError)
+		return
+	}
+
+	sessionID := uuid.New().String()
+	err = uc.Redis.Set(c, sessionID, strconv.Itoa(int(user.ID)), 24*time.Hour).Err()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "セッションの作成に失敗しました"})
+		return
+	}
+
+	maxAge := 60 * 60 * 24
+
+	c.SetCookie("session_id", sessionID, maxAge, "/", "localhost", false, true)
+
+	c.JSON(http.StatusOK, gin.H{"message": "ログインに成功しました"})
+	log.Printf("ログインできました")
 }

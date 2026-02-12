@@ -1,6 +1,6 @@
 -- name: CreateUser :one
 INSERT INTO users (
-  mail,
+  email,
   password,
   is_active,
   activation_token
@@ -13,6 +13,11 @@ RETURNING *;
 UPDATE users
 SET is_active = true, activation_token = NULL, activated_at = CURRENT_TIMESTAMP
 WHERE activation_token = $1;
+
+-- name: GetUserByEmail :one
+SELECT id, email, password, is_active
+FROM users
+WHERE email = $1;
 
 -- name: CreateTweet :one
 INSERT INTO tweets (

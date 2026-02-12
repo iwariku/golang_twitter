@@ -8,12 +8,15 @@ services:
       APP_URL: http://localhost:8080
       SMTP_ADDRESS: mailcatcher:1025
       MAIL_FROM: noreply@example.com
+      REDIS_ADDRESS: redis_server:6379
     ports:
       - '8080:8080'
     volumes:
       - .:/app
     depends_on:
       postgres:
+        condition: service_healthy
+      redis_server:
         condition: service_healthy
   mailcatcher:
     image: schickling/mailcatcher
@@ -35,4 +38,13 @@ services:
       test: ['CMD-SHELL', 'pg_isready -U root -d twitter_db']
       interval: 5s
       timeout: 5s
+      retries: 5
+  redis_server:
+    image: redis:latest
+    ports:
+      - '16379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
       retries: 5
