@@ -4,7 +4,6 @@ import (
 	"golang_twitter/db"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -28,30 +27,21 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	// 1. Cookieを取得
-	sessionID, err := c.Cookie("session_id")
-	if err != nil {
-		log.Printf("Cookieの取得に失敗しました: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Cookieの取得に失敗しました"})
+	// リクエストスコープに保存されたcurrent_user_idを取得
+	userIDAny, exists := c.Get("current_user_id")
+	if !exists {
+		log.Printf("ログインが必要です")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
 		return
 	}
 
-	// 2. RedisからUserIDを取得
-	userIDStr, err := tc.Redis.Get(c.Request.Context(), sessionID).Result()
-	if err != nil {
-		log.Printf("セッション切れです。ログインしてください")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "セッション切れです。ログインしてください"})
+	// 型変換チェック(anyをint32として証明するため)
+	userID, ok := userIDAny.(int32)
+	if !ok {
+		log.Printf("リクエストスコープ内のUserIDがint32ではありませんでした")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "内部エラーが発生しました"})
 		return
 	}
-
-	// 3. 型変換(DB保存の型と合わせるため)
-	tempID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		log.Printf("string型からint型への変換が失敗しました")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "サーバー内部でエラーが発生しました"})
-		return
-	}
-	userID := int32(tempID)
 
 	tweet, err := tc.Queries.CreateTweet(c.Request.Context(), db.CreateTweetParams{
 		UserID:  userID,
