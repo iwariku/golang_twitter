@@ -25,32 +25,28 @@ func main() {
 	am := &middleware.AuthMiddleware{Redis: redisClient}
 
 	r := gin.Default()
-	r.LoadHTMLGlob("view/*")
-	r.Static("/static", "./static")
-
 	r.GET("/health_check", func(c *gin.Context) {
 		// JSONレスポンスを返す
-		c.JSON(http.StatusOK, gin.H{
-			"message": "OK",
-		})
+		c.JSON(http.StatusOK, gin.H{"message": "OK"})
 	})
+
+	r.LoadHTMLGlob("view/*")
+	r.Static("/static", "./static")
 
 	r.GET("/signup", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "signup.html", nil)
 	})
 	r.POST("/signup", uc.SignUp)
-
 	r.GET("/login", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login.html", nil)
 	})
 	r.POST("/login", uc.Login)
-
 	r.GET("/activate", uc.Activate)
 
 	r.GET("/post", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "post.html", nil)
 	})
-	// グループを作成し、ミドルウェアを登録
+	// グループを作成し、ミドルウェアを登録。
 	authGroup := r.Group("/")
 	authGroup.Use(am.CheckLogin)
 	{
