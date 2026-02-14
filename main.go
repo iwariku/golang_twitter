@@ -20,7 +20,7 @@ func main() {
 	mailer := auth.NewMailer()
 	redisClient := infrastructure.NewRedisClient()
 	uc := &controller.UserController{Queries: queries, Mailer: mailer, Redis: redisClient}
-	tc := &controller.TweetController{Queries: queries}
+	tc := &controller.TweetController{Queries: queries, Redis: redisClient}
 
 	r := gin.Default()
 	r.LoadHTMLGlob("view/*")
