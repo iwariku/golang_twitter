@@ -14,6 +14,11 @@ type TweetController struct {
 	Redis   *redis.Client
 }
 
+type TweetResponse struct {
+	UserID  int32  `json:"user_id"`
+	Content string `json:"content"`
+}
+
 // Tweet投稿の流れ
 // リクエストするユーザーを取得
 // CreateTweetの引数に取得したユーザーとcontentを渡す
@@ -52,5 +57,11 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBへの保存に失敗しました"})
 		return
 	}
-	c.JSON(http.StatusCreated, tweet)
+
+	TweetRes := TweetResponse{
+		UserID:  tweet.UserID,
+		Content: tweet.Content,
+	}
+
+	c.JSON(http.StatusCreated, TweetRes)
 }
