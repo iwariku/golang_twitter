@@ -2,8 +2,8 @@ package auth
 
 import (
 	"fmt"
+	"golang_twitter/utils"
 	"net/smtp"
-	"os"
 )
 
 type MailerInterface interface {
@@ -19,18 +19,10 @@ type Mailer struct {
 // NewMailerは設定をするだけ
 func NewMailer() *Mailer {
 	return &Mailer{
-		BaseURL:     getEnvOrDefault("APP_URL", "http://localhost:8080"),
-		SMTPAddress: getEnvOrDefault("SMTP_ADDRESS", "mailcatcher:1025"),
-		FromEmail:   getEnvOrDefault("MAIL_FROM", "noreply@example.com"),
+		BaseURL:     utils.GetEnvOrDefault("APP_URL", "http://localhost:8080"),
+		SMTPAddress: utils.GetEnvOrDefault("SMTP_ADDRESS", "mailcatcher:1025"),
+		FromEmail:   utils.GetEnvOrDefault("MAIL_FROM", "noreply@example.com"),
 	}
-}
-
-// 環境変数を取得してif文で判定するコードが2つあったため、まとめて関数にした。NewMailerで使用
-func getEnvOrDefault(key, fallback string) string {
-	if result := os.Getenv(key); result != "" {
-		return result
-	}
-	return fallback
 }
 
 func (m *Mailer) SendActivationEmail(toMail string, token string) error {

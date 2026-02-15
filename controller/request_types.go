@@ -1,8 +1,8 @@
 package controller
 
-type SignUpRequest struct {
-	Mail     string `json:"mail" binding:"email"`
-	Password string `json:"password"`
+type AuthRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
 }
 
 type TweetRequest struct {

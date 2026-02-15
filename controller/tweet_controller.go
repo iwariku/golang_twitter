@@ -6,14 +6,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	// "github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9"
 )
 
-// PRがマージされたらredisのmodが入るけどこれは古いからまだ入っていない
-// 2/11PRをマージできなかったらgo getしてもいいかも
 type TweetController struct {
 	Queries *db.Queries
-	// Redis   *redis.Client
+	Redis   *redis.Client
+}
+
+type TweetResponse struct {
+	UserID  int32  `json:"user_id"`
+	Content string `json:"content"`
 }
 
 // Tweet投稿の流れ
@@ -29,8 +32,24 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
+	// リクエストスコープに保存されたcurrent_user_idを取得
+	userIDAny, exists := c.Get("current_user_id")
+	if !exists {
+		log.Printf("ログインが必要です")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	// 型変換チェック(anyをint32として証明するため)
+	userID, ok := userIDAny.(int32)
+	if !ok {
+		log.Printf("リクエストスコープ内のUserIDがint32ではありませんでした")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "内部エラーが発生しました"})
+		return
+	}
+
 	tweet, err := tc.Queries.CreateTweet(c.Request.Context(), db.CreateTweetParams{
-		UserID:  1,
+		UserID:  userID,
 		Content: req.Content,
 	})
 	if err != nil {
@@ -38,5 +57,11 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBへの保存に失敗しました"})
 		return
 	}
-	c.JSON(http.StatusCreated, tweet)
+
+	TweetRes := TweetResponse{
+		UserID:  tweet.UserID,
+		Content: tweet.Content,
+	}
+
+	c.JSON(http.StatusCreated, TweetRes)
 }

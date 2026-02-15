@@ -4,6 +4,8 @@ import (
 	"context"
 	"golang_twitter/controller"
 	"golang_twitter/db"
+	"golang_twitter/infrastructure"
+	"golang_twitter/middleware"
 	"golang_twitter/services/auth"
 	"net/http"
 
@@ -17,31 +19,39 @@ func main() {
 	defer conn.Close(ctx)
 
 	mailer := auth.NewMailer()
-	uc := &controller.UserController{Queries: queries, Mailer: mailer}
-	tc := &controller.TweetController{Queries: queries}
+	redisClient := infrastructure.NewRedisClient()
+	uc := &controller.UserController{Queries: queries, Mailer: mailer, Redis: redisClient}
+	tc := &controller.TweetController{Queries: queries, Redis: redisClient}
+	am := &middleware.AuthMiddleware{Redis: redisClient}
 
 	r := gin.Default()
-	r.LoadHTMLGlob("view/*")
-	r.Static("/static", "./static")
-
 	r.GET("/health_check", func(c *gin.Context) {
 		// JSONレスポンスを返す
-		c.JSON(http.StatusOK, gin.H{
-			"message": "OK",
-		})
+		c.JSON(http.StatusOK, gin.H{"message": "OK"})
 	})
+
+	r.LoadHTMLGlob("view/*")
+	r.Static("/static", "./static")
 
 	r.GET("/signup", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "signup.html", nil)
 	})
-
 	r.POST("/signup", uc.SignUp)
+	r.GET("/login", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", nil)
+	})
+	r.POST("/login", uc.Login)
 	r.GET("/activate", uc.Activate)
 
 	r.GET("/post", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "post.html", nil)
 	})
-	r.POST("/post", tc.TweetPost)
+	// グループを作成し、ミドルウェアを登録。
+	authGroup := r.Group("/")
+	authGroup.Use(am.CheckLogin)
+	{
+		authGroup.POST("/post", tc.TweetPost)
+	}
 
 	r.Run()
 }
