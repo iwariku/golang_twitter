@@ -47,13 +47,16 @@ func main() {
 		c.HTML(http.StatusOK, "post.html", nil)
 	})
 
-	r.GET("/posts", tc.GetTweets)
-
 	// グループを作成し、ミドルウェアを登録。
 	authGroup := r.Group("/")
 	authGroup.Use(am.CheckLogin)
 	{
 		authGroup.POST("/post", tc.TweetPost)
+
+		authGroup.GET("/home", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "home.html", nil)
+		})
+		authGroup.GET("api/tweets", tc.GetTweets)
 	}
 
 	r.Run()

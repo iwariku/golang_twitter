@@ -29,7 +29,7 @@
       </header>
 
       <div id="tweet-list" class="flex flex-col">
-        <div
+        <!-- <div
           class="p-4 border-b border-gray-100 hover:bg-gray-50/50 transition cursor-pointer"
         >
           <div class="flex gap-3">
@@ -46,7 +46,7 @@
               </p>
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <footer class="flex flex-col items-center p-8 gap-4">
@@ -69,5 +69,57 @@
         </div>
       </footer>
     </div>
+    <script>
+      async function loadTweets(limit = 10, offset = 0) {
+        try {
+          const response = await fetch(
+            `/api/tweets?limit=${limit}&offset=${offset}`,
+          );
+          if (!response.ok) throw new Error('データの取得に失敗しました');
+          const data = await response.json();
+          console.log('サーバーから届いた生データ:', data); // ← これを必ず確認！
+
+          const tweets = data.tweets;
+
+          if (!tweets) {
+            console.error(
+              'tweetsフィールドが見つかりません。構造を確認してください。',
+            );
+            return;
+          }
+
+          // 表示場所を特定し、中身を一度空にする
+          const tweetList = document.getElementById('tweet-list');
+          tweetList.innerHTML = '';
+
+          // 取得したツイートをループしてHTMLを生成
+          data.tweets.forEach((tweet) => {
+            const tweetCard = document.createElement('div');
+            tweetCard.className =
+              'p-4 border-b border-gray-100 hover:bg-gray-50/50 transition cursor-pointer';
+
+            tweetCard.innerHTML = `<div class="flex gap-3">
+                <div class="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-1">
+                    <span class="font-bold text-[15px] hover:underline">User ID: ${tweet.user_id}</span>
+                  </div>
+                  <p class="text-[15px] leading-5 mt-1 whitespace-pre-wrap">${tweet.content}</p>
+                </div>
+              </div>`;
+            tweetList.appendChild(tweetCard);
+          });
+
+          // ページの更新
+          document.getElementById('page-info').textContent =
+            `全${data.count}件`;
+        } catch (error) {
+          console.error('Error', error);
+        }
+      }
+
+      // ページの読み込み時に実行
+      loadTweets();
+    </script>
   </body>
 </html>
