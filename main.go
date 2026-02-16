@@ -46,6 +46,9 @@ func main() {
 	r.GET("/post", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "post.html", nil)
 	})
+
+	r.GET("/posts", tc.GetTweets)
+
 	// グループを作成し、ミドルウェアを登録。
 	authGroup := r.Group("/")
 	authGroup.Use(am.CheckLogin)
