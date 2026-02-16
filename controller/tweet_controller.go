@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"golang_twitter/db"
 	"log"
 	"net/http"
@@ -19,6 +20,21 @@ type TweetResponse struct {
 	Content string `json:"content"`
 }
 
+func GetUserIDFromContext(c *gin.Context) (int32, error) {
+	// リクエストスコープに保存されたcurrent_user_idを取得
+	userIDAny, exists := c.Get("current_user_id")
+	if !exists {
+		return 0, fmt.Errorf("user_idがコンテキストに設定されていません")
+	}
+
+	// 型変換チェック(anyをint32として証明するため)
+	userID, ok := userIDAny.(int32)
+	if !ok {
+		return 0, fmt.Errorf("user_idはint32型ではありません")
+	}
+	return userID, nil
+}
+
 // Tweet投稿の流れ
 // リクエストするユーザーを取得
 // CreateTweetの引数に取得したユーザーとcontentを渡す
@@ -32,19 +48,10 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	// リクエストスコープに保存されたcurrent_user_idを取得
-	userIDAny, exists := c.Get("current_user_id")
-	if !exists {
-		log.Printf("ログインが必要です")
+	userID, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
-		return
-	}
-
-	// 型変換チェック(anyをint32として証明するため)
-	userID, ok := userIDAny.(int32)
-	if !ok {
-		log.Printf("リクエストスコープ内のUserIDがint32ではありませんでした")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "内部エラーが発生しました"})
 		return
 	}
 
