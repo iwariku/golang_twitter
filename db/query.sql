@@ -18,3 +18,12 @@ WHERE activation_token = $1;
 SELECT id, email, password, is_active
 FROM users
 WHERE email = $1;
+
+-- name: CreateTweet :one
+INSERT INTO tweets (
+  user_id,
+  content
+) VALUES (
+  $1, $2
+)
+RETURNING *;

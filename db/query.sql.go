@@ -22,6 +22,33 @@ func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text)
 	return err
 }
 
+const createTweet = `-- name: CreateTweet :one
+INSERT INTO tweets (
+  user_id,
+  content
+) VALUES (
+  $1, $2
+)
+RETURNING id, user_id, content, created_at
+`
+
+type CreateTweetParams struct {
+	UserID  int32  `json:"user_id"`
+	Content string `json:"content"`
+}
+
+func (q *Queries) CreateTweet(ctx context.Context, arg CreateTweetParams) (Tweet, error) {
+	row := q.db.QueryRow(ctx, createTweet, arg.UserID, arg.Content)
+	var i Tweet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Content,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   email,
