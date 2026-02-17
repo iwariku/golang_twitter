@@ -70,17 +70,26 @@
       </footer>
     </div>
     <script>
-      async function loadTweets(limit = 10, offset = 0) {
+      let currentOffset = 0;
+      const limit = 10;
+      let totalCount = 0;
+
+      async function loadTweets(offset = 0) {
         try {
+          currentOffset = offset;
+
+          const newUrl = `${window.location.pathname}?limit=${limit}&offset=${currentOffset}`;
+          window.history.pushState({ offset: currentOffset }, '', newUrl);
+
           const response = await fetch(
-            `/api/tweets?limit=${limit}&offset=${offset}`,
+            `/api/tweets?limit=${limit}&offset=${currentOffset}`,
           );
           if (!response.ok) throw new Error('データの取得に失敗しました');
+
           const data = await response.json();
-          console.log('サーバーから届いた生データ:', data); // ← これを必ず確認！
+          totalCount = data.count;
 
           const tweets = data.tweets;
-
           if (!tweets) {
             console.error(
               'tweetsフィールドが見つかりません。構造を確認してください。',
@@ -93,12 +102,13 @@
           tweetList.innerHTML = '';
 
           // 取得したツイートをループしてHTMLを生成
-          data.tweets.forEach((tweet) => {
+          tweets.forEach((tweet) => {
             const tweetCard = document.createElement('div');
             tweetCard.className =
               'p-4 border-b border-gray-100 hover:bg-gray-50/50 transition cursor-pointer';
 
-            tweetCard.innerHTML = `<div class="flex gap-3">
+            tweetCard.innerHTML = `
+              <div class="flex gap-3">
                 <div class="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0"></div>
                 <div class="flex-1">
                   <div class="flex items-center gap-1">
@@ -110,13 +120,39 @@
             tweetList.appendChild(tweetCard);
           });
 
-          // ページの更新
-          document.getElementById('page-info').textContent =
-            `全${data.count}件`;
+          // ページネーションの部分を更新するため
+          updateUI();
         } catch (error) {
           console.error('Error', error);
         }
       }
+
+      function updateUI() {
+        const pageInfo = document.getElementById('page-info');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        // 現在のページの計算
+        const currentPage = Math.floor(currentOffset / limit) + 1;
+        const maxPage = Math.ceil(totalCount / limit) || 1;
+
+        pageInfo.textContent = `${currentPage} / ${maxPage} ページ (全 ${totalCount} 件)`;
+
+        prevBtn.disabled = currentOffset === 0;
+        nextBtn.disabled = currentOffset + limit >= totalCount;
+      }
+
+      document.getElementById('prev-btn').addEventListener('click', () => {
+        if (currentOffset >= limit) {
+          loadTweets(currentOffset - limit);
+        }
+      });
+
+      document.getElementById('next-btn').addEventListener('click', () => {
+        if (currentOffset + limit < totalCount) {
+          loadTweets(currentOffset + limit);
+        }
+      });
 
       // ページの読み込み時に実行
       loadTweets();
