@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>アカウント作成</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/js/auth.js" defer></script>
   </head>
   <body class="bg-gray-400 flex items-center justify-center min-h-screen">
     <div
@@ -53,19 +54,5 @@
         </button>
       </form>
     </div>
-    <script>
-      document.getElementById('loginForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        fetch('/login', {
-          method: 'post',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-      });
-    </script>
   </body>
 </html>
