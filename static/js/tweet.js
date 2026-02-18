@@ -3,8 +3,24 @@ const LIMIT = 10;
 let currentOffset = parseInt(urlParams.get('offset')) || 0;
 let totalCount = 0;
 
-const initHome = () => {
-  async function loadTweets(offset = 0) {
+const updateUI = () => {
+  const pageInfo = document.getElementById('page-info');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+
+  // ガード句を追加。tweet.jsは他のHTMLファイルでも読み込むため
+  if (!pageInfo || !prevBtn || !nextBtn) return;
+
+  const currentPage = Math.floor(currentOffset / LIMIT) + 1;
+  const maxPage = Math.ceil(totalCount / LIMIT) || 1;
+
+  pageInfo.textContent = `${currentPage} / ${maxPage} ページ (全 ${totalCount} 件)`;
+  prevBtn.disabled = currentOffset === 0;
+  nextBtn.disabled = currentOffset + LIMIT >= totalCount;
+};
+
+const loadTweetList = () => {
+  const loadTweets = async (offset = 0) => {
     try {
       currentOffset = offset;
 
@@ -45,23 +61,7 @@ const initHome = () => {
     } catch (error) {
       console.error('Error', error);
     }
-  }
-
-  function updateUI() {
-    const pageInfo = document.getElementById('page-info');
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-
-    // ガード句を追加。tweet.jsは他のHTMLファイルでも読み込むため
-    if (!pageInfo || !prevBtn || !nextBtn) return;
-
-    const currentPage = Math.floor(currentOffset / LIMIT) + 1;
-    const maxPage = Math.ceil(totalCount / LIMIT) || 1;
-
-    pageInfo.textContent = `${currentPage} / ${maxPage} ページ (全 ${totalCount} 件)`;
-    prevBtn.disabled = currentOffset === 0;
-    nextBtn.disabled = currentOffset + LIMIT >= totalCount;
-  }
+  };
 
   document.getElementById('prev-btn')?.addEventListener('click', () => {
     if (currentOffset >= LIMIT) {
@@ -78,7 +78,7 @@ const initHome = () => {
   loadTweets(currentOffset);
 };
 
-const initPost = () => {
+const post = () => {
   document.getElementById('tweet-form').addEventListener('submit', (e) => {
     e.preventDefault();
 
@@ -92,13 +92,13 @@ const initPost = () => {
   });
 };
 
-const init = () => {
+const dispatchPathTask = () => {
   const path = window.location.pathname;
   if (path.includes('home')) {
-    initHome();
+    loadTweetList();
   } else if (path.includes('post')) {
-    initPost();
+    post();
   }
 };
 
-init();
+dispatchPathTask();
