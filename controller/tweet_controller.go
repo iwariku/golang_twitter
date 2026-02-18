@@ -22,10 +22,10 @@ type TweetResponse struct {
 }
 
 type PaginatedTweetsResponse struct {
-	Tweets     []TweetResponse `json:"tweets"`
-	Limit      int             `json:"limit"`
-	Offset     int             `json:"offset"`
-	TotalCount int             `json:"count"`
+	Tweets []TweetResponse `json:"tweets"`
+	Limit  int             `json:"limit"`
+	Offset int             `json:"offset"`
+	Count  int             `json:"count"`
 }
 
 func GetUserIDFromContext(c *gin.Context) (int32, error) {
@@ -110,7 +110,7 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 		return
 	}
 
-	tweets, err := tc.Queries.GetAllTweets(c.Request.Context(), db.GetAllTweetsParams{
+	tweets, err := tc.Queries.GetTweets(c.Request.Context(), db.GetTweetsParams{
 		Limit:  int32(limitInt),
 		Offset: int32(offsetInt),
 	})
@@ -129,10 +129,10 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 	}
 
 	paginatedRes := PaginatedTweetsResponse{
-		Tweets:     TweetsRes,
-		Limit:      limitInt,
-		Offset:     offsetInt,
-		TotalCount: int(TotalCount),
+		Tweets: TweetsRes,
+		Limit:  limitInt,
+		Offset: offsetInt,
+		Count:  int(TotalCount),
 	}
 
 	c.JSON(http.StatusOK, paginatedRes)

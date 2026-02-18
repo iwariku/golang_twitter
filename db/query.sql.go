@@ -98,19 +98,30 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
-const getAllTweets = `-- name: GetAllTweets :many
+const getTweetCount = `-- name: GetTweetCount :one
+SELECT COUNT(*) FROM tweets
+`
+
+func (q *Queries) GetTweetCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getTweetCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getTweets = `-- name: GetTweets :many
 SELECT id, user_id, content, created_at FROM tweets
 ORDER BY id DESC
 LIMIT $1 OFFSET $2
 `
 
-type GetAllTweetsParams struct {
+type GetTweetsParams struct {
 	Limit  int32 `json:"limit"`
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllTweets(ctx context.Context, arg GetAllTweetsParams) ([]Tweet, error) {
-	rows, err := q.db.Query(ctx, getAllTweets, arg.Limit, arg.Offset)
+func (q *Queries) GetTweets(ctx context.Context, arg GetTweetsParams) ([]Tweet, error) {
+	rows, err := q.db.Query(ctx, getTweets, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -132,17 +143,6 @@ func (q *Queries) GetAllTweets(ctx context.Context, arg GetAllTweetsParams) ([]T
 		return nil, err
 	}
 	return items, nil
-}
-
-const getTweetCount = `-- name: GetTweetCount :one
-SELECT COUNT(*) FROM tweets
-`
-
-func (q *Queries) GetTweetCount(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, getTweetCount)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one

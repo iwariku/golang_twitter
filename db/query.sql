@@ -28,7 +28,7 @@ INSERT INTO tweets (
 )
 RETURNING *;
 
--- name: GetAllTweets :many
+-- name: GetTweets :many
 SELECT * FROM tweets
 ORDER BY id DESC
 LIMIT $1 OFFSET $2;
