@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>投稿</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/js/tweet.js" defer></script>
   </head>
 
   <body class="bg-gray-200 flex items-center justify-center min-h-screen">
@@ -52,19 +53,5 @@
         </form>
       </div>
     </div>
-
-    <script>
-      document.getElementById('tweet-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const textValue = document.getElementById('tweet-content').value;
-
-        fetch('/post', {
-          method: 'post',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: textValue }),
-        });
-      });
-    </script>
   </body>
 </html>
