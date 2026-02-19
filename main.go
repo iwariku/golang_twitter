@@ -57,6 +57,11 @@ func main() {
 			c.HTML(http.StatusOK, "home.html", nil)
 		})
 		authGroup.GET("api/tweets", tc.GetTweets)
+
+		authGroup.GET("/detail", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "post-detail.html", nil)
+		})
+		authGroup.GET("api/tweet-detail", tc.GetTweet)
 	}
 
 	r.Run()

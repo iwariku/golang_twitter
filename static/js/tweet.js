@@ -92,12 +92,40 @@ const post = () => {
   });
 };
 
+const getTweet = async () => {
+  const urlParams = new URLSearchParams(window.location.search); // 共通にする
+  let currentParams = urlParams.get('id') || 1; // 共通にする
+  const response = await fetch(`/api/tweet-detail?id=${currentParams}`);
+
+  // 画面表示の部分
+  const data = await response.json();
+  console.log('サーバーから届いたデータ:', data);
+  container = document.getElementById('tweet-detail-container');
+  container.innerHTML = `
+    <div class="max-w-[600px] border border-gray-200 p-4">
+      <div class="flex items-center mb-3">
+        <div class="w-12 h-12 bg-gray-200 rounded-full mr-3"></div>
+        <div>
+          <div class="font-bold">ユーザーID: ${data.user_id}</div>
+          <div class="text-gray-500 text-sm">@user_${data.user_id}</div>
+        </div>
+      </div>
+
+      <div class="text-[23px] leading-8 whitespace-pre-wrap">
+        ${data.content}
+      </div>
+    </div>
+  `;
+};
+
 const dispatchPathTask = () => {
   const path = window.location.pathname;
   if (path.includes('home')) {
     loadTweetList();
   } else if (path.includes('post')) {
     post();
+  } else if (path.includes('detail')) {
+    getTweet();
   }
 };
 
