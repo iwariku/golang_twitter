@@ -137,3 +137,34 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 
 	c.JSON(http.StatusOK, paginatedRes)
 }
+
+func (tc *TweetController) GetTweet(c *gin.Context) {
+	idStr := c.Query("id")
+	fmt.Println(idStr)
+	fmt.Println("string確認用")
+
+	// 型変換前も使ったよね？DBにアクセスの時に使うってことはUser詳細でも使うってことになるよね？
+	// であれば共通関数みたいに分ける方がいいのかも
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("型変換に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, "型変換に失敗しました。なくてもいいかも")
+		return
+	}
+	fmt.Println(id)
+	fmt.Println("int確認用")
+
+	tweet, err := tc.Queries.GetTweet(c.Request.Context(), int32(id))
+	if err != nil {
+		log.Printf("DBからの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, "DBからの取得に失敗しました")
+		return
+	}
+
+	TweetRes := TweetResponse{
+		UserID:  tweet.UserID,
+		Content: tweet.Content,
+	}
+
+	c.JSON(http.StatusOK, TweetRes)
+}
