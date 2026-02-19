@@ -27,3 +27,11 @@ INSERT INTO tweets (
   $1, $2
 )
 RETURNING *;
+
+-- name: GetTweets :many
+SELECT * FROM tweets
+ORDER BY id DESC
+LIMIT $1 OFFSET $2;
+
+-- name: GetTweetCount :one
+SELECT COUNT(*) FROM tweets;

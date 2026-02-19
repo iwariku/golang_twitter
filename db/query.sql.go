@@ -98,6 +98,53 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const getTweetCount = `-- name: GetTweetCount :one
+SELECT COUNT(*) FROM tweets
+`
+
+func (q *Queries) GetTweetCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getTweetCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getTweets = `-- name: GetTweets :many
+SELECT id, user_id, content, created_at FROM tweets
+ORDER BY id DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetTweetsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetTweets(ctx context.Context, arg GetTweetsParams) ([]Tweet, error) {
+	rows, err := q.db.Query(ctx, getTweets, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Tweet
+	for rows.Next() {
+		var i Tweet
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Content,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, password, is_active
 FROM users
