@@ -98,6 +98,25 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const getTweet = `-- name: GetTweet :one
+SELECT id, user_id, content
+FROM tweets
+WHERE id = $1
+`
+
+type GetTweetRow struct {
+	ID      int32  `json:"id"`
+	UserID  int32  `json:"user_id"`
+	Content string `json:"content"`
+}
+
+func (q *Queries) GetTweet(ctx context.Context, id int32) (GetTweetRow, error) {
+	row := q.db.QueryRow(ctx, getTweet, id)
+	var i GetTweetRow
+	err := row.Scan(&i.ID, &i.UserID, &i.Content)
+	return i, err
+}
+
 const getTweetCount = `-- name: GetTweetCount :one
 SELECT COUNT(*) FROM tweets
 `
