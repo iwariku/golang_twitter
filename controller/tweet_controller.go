@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"golang_twitter/db"
+	"golang_twitter/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -81,6 +82,7 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 	c.JSON(http.StatusCreated, TweetRes)
 }
 
+// utils/param.goでstring->int型の関数を作成したので、別ブランチでリファクタリングする。終わり次第コメントを消す
 func (tc *TweetController) GetTweets(c *gin.Context) {
 	// 1. URLパラメーターから文字列を取得
 	limitStr := c.Query("limit")
@@ -139,22 +141,14 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 }
 
 func (tc *TweetController) GetTweet(c *gin.Context) {
-	idStr := c.Query("id")
-	fmt.Println(idStr)
-	fmt.Println("string確認用")
-
-	// 型変換前も使ったよね？DBにアクセスの時に使うってことはUser詳細でも使うってことになるよね？
-	// であれば共通関数みたいに分ける方がいいのかも
-	id, err := strconv.Atoi(idStr)
+	id, err := utils.ParseQueryInt32(c, "id")
 	if err != nil {
-		log.Printf("型変換に失敗しました: %v", err)
-		c.JSON(http.StatusInternalServerError, "型変換に失敗しました。なくてもいいかも")
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, "不正なリクエストです")
 		return
 	}
-	fmt.Println(id)
-	fmt.Println("int確認用")
 
-	tweet, err := tc.Queries.GetTweet(c.Request.Context(), int32(id))
+	tweet, err := tc.Queries.GetTweet(c.Request.Context(), id)
 	if err != nil {
 		log.Printf("DBからの取得に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, "DBからの取得に失敗しました")
