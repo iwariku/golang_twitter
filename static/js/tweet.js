@@ -102,17 +102,18 @@ const getTweet = async () => {
   console.log('サーバーから届いたデータ:', data);
   container = document.getElementById('tweet-detail-container');
   container.innerHTML = `
-    <div class="max-w-[600px] border border-gray-200 p-4">
-      <div class="flex items-center mb-3">
-        <div class="w-12 h-12 bg-gray-200 rounded-full mr-3"></div>
-        <div>
-          <div class="font-bold">ユーザーID: ${data.user_id}</div>
-          <div class="text-gray-500 text-sm">@user_${data.user_id}</div>
+    <div class="w-[600px] min-w-[600px] border-x border-gray-200 min-h-screen">
+      <div class="p-4 border-b border-gray-200">
+        <div class="flex items-center mb-4">
+          <div class="w-12 h-12 bg-gray-200 rounded-full mr-3"></div>
+          <div>
+            <div class="font-bold text-[15px]">ユーザーID: ${data.user_id}</div>
+          </div>
         </div>
-      </div>
 
-      <div class="text-[23px] leading-8 whitespace-pre-wrap">
-        ${data.content}
+        <div class="text-[23px] leading-8 whitespace-pre-wrap break-words mb-4">
+          ${data.content}
+        </div>
       </div>
     </div>
   `;
