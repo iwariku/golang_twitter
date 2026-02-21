@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"golang_twitter/db"
+	"golang_twitter/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -43,6 +44,14 @@ func GetUserIDFromContext(c *gin.Context) (int32, error) {
 	return userID, nil
 }
 
+// formatTweetResponseはDBモデルからAPIレスポンス用の構造体に変換します
+func formatTweetResponse(userID int32, content string) TweetResponse {
+	return TweetResponse{
+		UserID:  userID,
+		Content: content,
+	}
+}
+
 // Tweet投稿の流れ
 // リクエストするユーザーを取得
 // CreateTweetの引数に取得したユーザーとcontentを渡す
@@ -73,14 +82,12 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	TweetRes := TweetResponse{
-		UserID:  tweet.UserID,
-		Content: tweet.Content,
-	}
+	TweetRes := formatTweetResponse(tweet.UserID, tweet.Content)
 
 	c.JSON(http.StatusCreated, TweetRes)
 }
 
+// utils/param.goでstring->int型の関数を作成したので、別ブランチでリファクタリングする。終わり次第コメントを消す
 func (tc *TweetController) GetTweets(c *gin.Context) {
 	// 1. URLパラメーターから文字列を取得
 	limitStr := c.Query("limit")
@@ -122,10 +129,7 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 
 	var TweetsRes []TweetResponse
 	for _, t := range tweets {
-		TweetsRes = append(TweetsRes, TweetResponse{
-			UserID:  t.UserID,
-			Content: t.Content,
-		})
+		TweetsRes = append(TweetsRes, formatTweetResponse(t.UserID, t.Content))
 	}
 
 	paginatedRes := PaginatedTweetsResponse{
@@ -136,4 +140,24 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, paginatedRes)
+}
+
+func (tc *TweetController) GetTweet(c *gin.Context) {
+	id, err := utils.ParseQueryInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, "不正なリクエストです")
+		return
+	}
+
+	tweet, err := tc.Queries.GetTweet(c.Request.Context(), id)
+	if err != nil {
+		log.Printf("DBからの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, "DBからの取得に失敗しました")
+		return
+	}
+
+	TweetRes := formatTweetResponse(tweet.UserID, tweet.Content)
+
+	c.JSON(http.StatusOK, TweetRes)
 }
