@@ -44,6 +44,14 @@ func GetUserIDFromContext(c *gin.Context) (int32, error) {
 	return userID, nil
 }
 
+// formatTweetResponseはDBモデルからAPIレスポンス用の構造体に変換します
+func formatTweetResponse(userID int32, content string) TweetResponse {
+	return TweetResponse{
+		UserID:  userID,
+		Content: content,
+	}
+}
+
 // Tweet投稿の流れ
 // リクエストするユーザーを取得
 // CreateTweetの引数に取得したユーザーとcontentを渡す
@@ -74,10 +82,7 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	TweetRes := TweetResponse{
-		UserID:  tweet.UserID,
-		Content: tweet.Content,
-	}
+	TweetRes := formatTweetResponse(tweet.UserID, tweet.Content)
 
 	c.JSON(http.StatusCreated, TweetRes)
 }
@@ -124,10 +129,7 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 
 	var TweetsRes []TweetResponse
 	for _, t := range tweets {
-		TweetsRes = append(TweetsRes, TweetResponse{
-			UserID:  t.UserID,
-			Content: t.Content,
-		})
+		TweetsRes = append(TweetsRes, formatTweetResponse(t.UserID, t.Content))
 	}
 
 	paginatedRes := PaginatedTweetsResponse{
@@ -155,10 +157,7 @@ func (tc *TweetController) GetTweet(c *gin.Context) {
 		return
 	}
 
-	TweetRes := TweetResponse{
-		UserID:  tweet.UserID,
-		Content: tweet.Content,
-	}
+	TweetRes := formatTweetResponse(tweet.UserID, tweet.Content)
 
 	c.JSON(http.StatusOK, TweetRes)
 }
