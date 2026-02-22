@@ -29,6 +29,18 @@ type UserController struct {
 	Redis   *redis.Client
 }
 
+type UserResponse struct {
+	UserName         string    `json:"user_name"`
+	SelfIntroduction string    `json:"self_introduction"`
+	DateOfBirth      time.Time `json:"date_of_birth"`
+	ProfileImage     string    `json:"profile_image"`
+}
+
+type UserProfileResponse struct {
+	User   UserResponse    `json:"user"`
+	Tweets []TweetResponse `json:"tweets"`
+}
+
 // SignUpの流れ
 // UserController型のポインタを示す変数がSingUpというメソッドを持つ
 // SingUpメソッドは(c *gin.Context)を引数に取る。*gin.ContextはGinフレームワークがHTTPリクエストの時に自動的に作ってくれる
@@ -149,3 +161,68 @@ func (uc *UserController) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "ログインに成功しました"})
 	log.Printf("ログインできました")
 }
+
+// ユーザー詳細
+// v: クライアントからuser_idの情報を叩くfetchAPI
+// c: dbにアクセスできる形式に変形
+// m: user_idを元にdbにデータを取得しにいく
+// c: json形式で返却
+// v: 画面に表示
+func (uc *UserController) GetUser(c *gin.Context) {
+	id, err := utils.ParseQueryInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
+		return
+	}
+
+	user, err := uc.Queries.GetUser(c.Request.Context(), id)
+	if err != nil {
+		log.Printf("DBからの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBからの取得に失敗しました"})
+		return
+	}
+
+	UserRes := UserResponse{
+		UserName:         user.UserName.String,
+		SelfIntroduction: user.SelfIntroduction.String,
+		DateOfBirth:      user.DateOfBirth.Time,
+		ProfileImage:     user.ProfileImage.String,
+	}
+
+	c.JSON(http.StatusOK, UserRes)
+}
+
+// func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
+// 	id, err := utils.ParseQueryInt32(c, "id")
+// 	if err != nil {
+// 		log.Printf("パラメータ解析に失敗しました: %v", err)
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
+// 		return
+// 	}
+
+// 	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+// 		return
+// 	}
+
+// 	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+// 		return
+// 	}
+
+// 	// ユーザー詳細用ツイート一覧成型
+// 	tweets, err := uc.Queries.GetTweetsByUserID(c.Request.Context(), db.GetTweetsByUserIDParams{
+// 		UserID: id,
+// 		Limit:  limit,
+// 		Offset: offset,
+// 	})
+// 	if err != nil {
+// 		log.Printf("ツイート取得失敗: %v", err)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+// 		return
+// 	}
+
+// }

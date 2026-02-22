@@ -164,6 +164,76 @@ func (q *Queries) GetTweets(ctx context.Context, arg GetTweetsParams) ([]Tweet, 
 	return items, nil
 }
 
+const getTweetsByUserID = `-- name: GetTweetsByUserID :many
+SELECT id, user_id, content, created_at
+FROM tweets
+WHERE user_id = $1
+ORDER BY id DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetTweetsByUserIDParams struct {
+	UserID int32 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetTweetsByUserID(ctx context.Context, arg GetTweetsByUserIDParams) ([]Tweet, error) {
+	rows, err := q.db.Query(ctx, getTweetsByUserID, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Tweet
+	for rows.Next() {
+		var i Tweet
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Content,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUser = `-- name: GetUser :one
+SELECT id, email, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, is_active, activation_token, activated_at, created_at, updated_at 
+FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Password,
+		&i.UserName,
+		&i.PhoneNumber,
+		&i.NickName,
+		&i.SelfIntroduction,
+		&i.Place,
+		&i.WebSite,
+		&i.DateOfBirth,
+		&i.ProfileImage,
+		&i.AvatarImage,
+		&i.IsActive,
+		&i.ActivationToken,
+		&i.ActivatedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, password, is_active
 FROM users

@@ -5,6 +5,7 @@ import (
 	"regexp"
 )
 
+// utilsに持っていく
 func validatePassword(p string) error {
 	if len(p) < 8 {
 		return errors.New("パスワードは8文字以上にしてください")

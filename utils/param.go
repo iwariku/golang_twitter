@@ -20,3 +20,17 @@ func ParseQueryInt32(c *gin.Context, key string) (int32, error) {
 
 	return int32(val), nil
 }
+
+func ParseQueryInt32WithDefault(c *gin.Context, key string, defaultVal int32) (int32, error) {
+	valStr := c.Query(key)
+	if valStr == "" {
+		return defaultVal, nil
+	}
+
+	val, err := strconv.Atoi(valStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return int32(val), nil
+}
