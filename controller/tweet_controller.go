@@ -31,14 +31,6 @@ func GetUserIDFromContext(c *gin.Context) (int32, error) {
 	return userID, nil
 }
 
-// formatTweetResponseはDBモデルからAPIレスポンス用の構造体に変換します
-func formatTweetResponse(userID int32, content string) TweetResponse {
-	return TweetResponse{
-		UserID:  userID,
-		Content: content,
-	}
-}
-
 // Tweet投稿の流れ
 // リクエストするユーザーを取得
 // CreateTweetの引数に取得したユーザーとcontentを渡す
@@ -69,24 +61,26 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	TweetRes := formatTweetResponse(tweet.UserID, tweet.Content)
+	tweetRes := FormatTweetResponse(tweet.UserID, tweet.Content)
 
-	c.JSON(http.StatusCreated, TweetRes)
+	c.JSON(http.StatusCreated, tweetRes)
 }
 
 func (tc *TweetController) GetTweets(c *gin.Context) {
 	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が違います"})
+		return
 	}
 
 	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が違います"})
+		return
 	}
 
 	// 件数取得
-	TotalCount, err := tc.Queries.GetTweetCount(c.Request.Context())
+	totalCount, err := tc.Queries.GetTweetCount(c.Request.Context())
 	if err != nil {
 		log.Printf("件数取得に失敗しました")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗失敗しました"})
@@ -103,19 +97,9 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 		return
 	}
 
-	var TweetsRes []TweetResponse
-	for _, t := range tweets {
-		TweetsRes = append(TweetsRes, formatTweetResponse(t.UserID, t.Content))
-	}
+	paginatedTweetsResponse := FormatPaginatedTweetsResponse(tweets, limit, offset, totalCount)
 
-	paginatedRes := PaginatedTweetsResponse{
-		Tweets: TweetsRes,
-		Limit:  int(limit),
-		Offset: int(offset),
-		Count:  int(TotalCount),
-	}
-
-	c.JSON(http.StatusOK, paginatedRes)
+	c.JSON(http.StatusOK, paginatedTweetsResponse)
 }
 
 func (tc *TweetController) GetTweet(c *gin.Context) {
@@ -133,7 +117,7 @@ func (tc *TweetController) GetTweet(c *gin.Context) {
 		return
 	}
 
-	TweetRes := formatTweetResponse(tweet.UserID, tweet.Content)
+	tweetRes := FormatTweetResponse(tweet.UserID, tweet.Content)
 
-	c.JSON(http.StatusOK, TweetRes)
+	c.JSON(http.StatusOK, tweetRes)
 }
