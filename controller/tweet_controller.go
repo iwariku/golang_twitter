@@ -17,18 +17,6 @@ type TweetController struct {
 	Redis   *redis.Client
 }
 
-type TweetResponse struct {
-	UserID  int32  `json:"user_id"`
-	Content string `json:"content"`
-}
-
-type PaginatedTweetsResponse struct {
-	Tweets []TweetResponse `json:"tweets"`
-	Limit  int             `json:"limit"`
-	Offset int             `json:"offset"`
-	Count  int             `json:"count"`
-}
-
 func GetUserIDFromContext(c *gin.Context) (int32, error) {
 	// リクエストスコープに保存されたcurrent_user_idを取得
 	userIDAny, exists := c.Get("current_user_id")

@@ -29,18 +29,6 @@ type UserController struct {
 	Redis   *redis.Client
 }
 
-type UserResponse struct {
-	UserName         string    `json:"user_name"`
-	SelfIntroduction string    `json:"self_introduction"`
-	DateOfBirth      time.Time `json:"date_of_birth"`
-	ProfileImage     string    `json:"profile_image"`
-}
-
-type UserProfileResponse struct {
-	User   UserResponse    `json:"user"`
-	Tweets []TweetResponse `json:"tweets"`
-}
-
 // SignUpの流れ
 // UserController型のポインタを示す変数がSingUpというメソッドを持つ
 // SingUpメソッドは(c *gin.Context)を引数に取る。*gin.ContextはGinフレームワークがHTTPリクエストの時に自動的に作ってくれる
