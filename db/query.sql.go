@@ -128,6 +128,19 @@ func (q *Queries) GetTweetCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getTweetCountByUserID = `-- name: GetTweetCountByUserID :one
+SELECT COUNT(*)
+FROM tweets
+WHERE user_id = $1
+`
+
+func (q *Queries) GetTweetCountByUserID(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getTweetCountByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getTweets = `-- name: GetTweets :many
 SELECT id, user_id, content, created_at FROM tweets
 ORDER BY id DESC

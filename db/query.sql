@@ -52,3 +52,8 @@ FROM tweets
 WHERE user_id = $1
 ORDER BY id DESC
 LIMIT $2 OFFSET $3;
+
+-- name: GetTweetCountByUserID :one
+SELECT COUNT(*)
+FROM tweets
+WHERE user_id = $1;
