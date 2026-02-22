@@ -67,7 +67,7 @@ func main() {
 			c.HTML(http.StatusOK, "user-detail.html", nil)
 		})
 		authGroup.GET("/api/user-detail", uc.GetUser)
-		// authGroup.GET("/api/user-tweets", uc.GetUserTweet)
+		authGroup.GET("/api/user-tweets", uc.GetTweetsByUserID)
 	}
 
 	r.Run()

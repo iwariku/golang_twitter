@@ -181,36 +181,47 @@ func (uc *UserController) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, UserRes)
 }
 
-// func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
-// 	id, err := utils.ParseQueryInt32(c, "id")
-// 	if err != nil {
-// 		log.Printf("パラメータ解析に失敗しました: %v", err)
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
-// 		return
-// 	}
+func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
+	id, err := utils.ParseQueryInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
+		return
+	}
 
-// 	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
-// 		return
-// 	}
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+		return
+	}
 
-// 	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
-// 		return
-// 	}
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+		return
+	}
 
-// 	// ユーザー詳細用ツイート一覧成型
-// 	tweets, err := uc.Queries.GetTweetsByUserID(c.Request.Context(), db.GetTweetsByUserIDParams{
-// 		UserID: id,
-// 		Limit:  limit,
-// 		Offset: offset,
-// 	})
-// 	if err != nil {
-// 		log.Printf("ツイート取得失敗: %v", err)
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
-// 		return
-// 	}
+	totalCount, err := uc.Queries.GetTweetCountByUserID(c.Request.Context(), id)
+	if err != nil {
+		log.Printf("件数取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
+	}
 
-// }
+	// ユーザー詳細用ツイート一覧成型
+	tweets, err := uc.Queries.GetTweetsByUserID(c.Request.Context(), db.GetTweetsByUserIDParams{
+		UserID: id,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		log.Printf("データの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	paginatedTweetsResponse := FormatPaginatedTweetsResponse(tweets, limit, offset, totalCount)
+
+	c.JSON(http.StatusOK, paginatedTweetsResponse)
+
+}
