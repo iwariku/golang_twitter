@@ -6,7 +6,6 @@ import (
 	"golang_twitter/utils"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -75,26 +74,15 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 	c.JSON(http.StatusCreated, TweetRes)
 }
 
-// utils/param.goでstring->int型の関数を作成したので、別ブランチでリファクタリングする。終わり次第コメントを消す
 func (tc *TweetController) GetTweets(c *gin.Context) {
-	// 1. URLパラメーターから文字列を取得
-	limitStr := c.Query("limit")
-	if limitStr == "" {
-		limitStr = "10"
-	}
-	offsetStr := c.Query("offset")
-	if offsetStr == "" {
-		offsetStr = "0"
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が違います"})
 	}
 
-	// 2. 文字列をint型に変換する
-	limitInt, err := strconv.Atoi(limitStr)
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
 	if err != nil {
-		limitInt = 10
-	}
-	offsetInt, err := strconv.Atoi(offsetStr)
-	if err != nil {
-		offsetInt = 0
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が違います"})
 	}
 
 	// 件数取得
@@ -106,8 +94,8 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 	}
 
 	tweets, err := tc.Queries.GetTweets(c.Request.Context(), db.GetTweetsParams{
-		Limit:  int32(limitInt),
-		Offset: int32(offsetInt),
+		Limit:  limit,
+		Offset: offset,
 	})
 	if err != nil {
 		log.Printf("DBからの取得に失敗: %v", err)
@@ -122,8 +110,8 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 
 	paginatedRes := PaginatedTweetsResponse{
 		Tweets: TweetsRes,
-		Limit:  limitInt,
-		Offset: offsetInt,
+		Limit:  int(limit),
+		Offset: int(offset),
 		Count:  int(TotalCount),
 	}
 
