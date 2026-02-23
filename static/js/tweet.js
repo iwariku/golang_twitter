@@ -37,7 +37,6 @@ const setupPagination = () => {
       loadTweets(currentOffset + LIMIT);
     }
   });
-  loadTweets(currentOffset);
 };
 
 const updateUI = () => {
@@ -56,11 +55,12 @@ const updateUI = () => {
   nextBtn.disabled = currentOffset + LIMIT >= totalCount;
 };
 
+// ツイート一覧表示
 const loadTweets = async (offset = 0) => {
   try {
     currentOffset = offset;
 
-    // --- 【ここを修正：user-detail の時は URL を書き換えない】 ---
+    // user-detail の時は URL を書き換えない
     if (!window.location.pathname.includes('user-detail')) {
       const params = new URLSearchParams(window.location.search);
       params.set('limit', LIMIT);
@@ -68,7 +68,6 @@ const loadTweets = async (offset = 0) => {
       const newUrl = `${window.location.pathname}?${params.toString()}`;
       window.history.pushState({ offset: currentOffset }, '', newUrl);
     }
-    // --------------------------------------------------------
 
     const separator = currentApiUrl.includes('?') ? '&' : '?';
     const response = await fetch(
@@ -91,7 +90,6 @@ const loadTweets = async (offset = 0) => {
       });
     }
 
-    // デバッグ
     console.log(`デバック用: ${data}`);
 
     updateUI();
@@ -115,6 +113,7 @@ const post = () => {
   });
 };
 
+// ツイート詳細
 const getTweet = async () => {
   let id = urlParams.get('id') || 1;
   const response = await fetch(`/api/tweet-detail?id=${id}`);
@@ -131,14 +130,17 @@ const dispatchPathTask = async () => {
 
   if (path.includes('home')) {
     currentApiUrl = '/api/tweets';
+    loadTweets();
     setupPagination();
   } else if (path.includes('user-detail')) {
     const userId = params.get('id');
     if (!userId) return;
 
-    // 先にユーザー情報を取得して画面に出す（終わるまで次へ行かない）
+    // 先にユーザー情報を取得して画面に出す（終わるまで次へ行かない
+    // 先にDBにアクセスしてデータの取得に失敗したため
     await getUser();
     currentApiUrl = `/api/user-tweets?id=${userId}`;
+    loadTweets();
     setupPagination();
   } else if (path.includes('post')) {
     post();
