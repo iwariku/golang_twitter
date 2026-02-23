@@ -56,12 +56,12 @@ func main() {
 		authGroup.GET("/home", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "home.html", nil)
 		})
-		authGroup.GET("api/tweets", tc.GetTweets)
+		authGroup.GET("/api/tweets", tc.GetTweets)
 
-		authGroup.GET("/detail", func(c *gin.Context) {
+		authGroup.GET("/tweet-detail", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "post-detail.html", nil)
 		})
-		authGroup.GET("api/tweet-detail", tc.GetTweet)
+		authGroup.GET("/api/tweet-detail", tc.GetTweet)
 
 		authGroup.GET("/user-detail", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "user-detail.html", nil)

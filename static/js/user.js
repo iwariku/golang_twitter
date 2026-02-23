@@ -1,10 +1,10 @@
 const getUser = async () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  let currentParams = urlParams.get('id') || 1;
+  const currentParams =
+    new URLSearchParams(window.location.search).get('id') || 1;
   const response = await fetch(`/api/user-detail?id=${currentParams}`);
-
   const data = await response.json();
-  console.log('サーバーから届いたデータ:', data);
+
+  console.log('ユーザー情報取得完了');
   container = document.getElementById('user-detail-container');
   container.innerHTML = `
   <div class="p-10">
@@ -20,5 +20,3 @@ const getUser = async () => {
   </div>
 `;
 };
-
-getUser();
