@@ -3,10 +3,11 @@ package controller
 import "golang_twitter/db"
 
 // formatTweetResponseはDBモデルからAPIレスポンス用の構造体に変換する
-func FormatTweetResponse(userID int32, content string) TweetResponse {
+// 拡張性を意識し、引数はDBモデルそのものを渡す。
+func FormatTweetResponse(t db.Tweet) TweetResponse {
 	return TweetResponse{
-		UserID:  userID,
-		Content: content,
+		UserID:  t.UserID,
+		Content: t.Content,
 	}
 }
 
@@ -15,7 +16,7 @@ func FormatTweetResponse(userID int32, content string) TweetResponse {
 func FormatPaginatedTweetsResponse(tweets []db.Tweet, limit, offset int32, totalCount int64) PaginatedTweetsResponse {
 	var tweetsRes []TweetResponse
 	for _, t := range tweets {
-		tweetsRes = append(tweetsRes, FormatTweetResponse(t.UserID, t.Content))
+		tweetsRes = append(tweetsRes, FormatTweetResponse(t))
 	}
 
 	return PaginatedTweetsResponse{

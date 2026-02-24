@@ -61,7 +61,7 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	tweetRes := FormatTweetResponse(tweet.UserID, tweet.Content)
+	tweetRes := FormatTweetResponse(tweet)
 
 	c.JSON(http.StatusCreated, tweetRes)
 }
@@ -117,7 +117,7 @@ func (tc *TweetController) GetTweet(c *gin.Context) {
 		return
 	}
 
-	tweetRes := FormatTweetResponse(tweet.UserID, tweet.Content)
+	tweetRes := FormatTweetResponse(tweet)
 
 	c.JSON(http.StatusOK, tweetRes)
 }
