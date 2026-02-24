@@ -22,6 +22,34 @@ func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text)
 	return err
 }
 
+const createLike = `-- name: CreateLike :one
+INSERT INTO likes (
+  user_id,
+  tweet_id
+) VALUES (
+  $1, $2
+)
+RETURNING id, user_id, tweet_id, created_at
+`
+
+type CreateLikeParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+// いいね機能
+func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) (Like, error) {
+	row := q.db.QueryRow(ctx, createLike, arg.UserID, arg.TweetID)
+	var i Like
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TweetID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createTweet = `-- name: CreateTweet :one
 INSERT INTO tweets (
   user_id,
@@ -96,6 +124,55 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const deleteLike = `-- name: DeleteLike :exec
+DELETE 
+FROM likes
+WHERE user_id = $1 AND tweet_id = $2
+`
+
+type DeleteLikeParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+func (q *Queries) DeleteLike(ctx context.Context, arg DeleteLikeParams) error {
+	_, err := q.db.Exec(ctx, deleteLike, arg.UserID, arg.TweetID)
+	return err
+}
+
+const getLikeCountByTweetID = `-- name: GetLikeCountByTweetID :one
+SELECT COUNT(*)
+FROM likes
+WHERE tweet_id = $1
+`
+
+func (q *Queries) GetLikeCountByTweetID(ctx context.Context, tweetID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getLikeCountByTweetID, tweetID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getLikeExists = `-- name: GetLikeExists :one
+SELECT EXISTS (
+  SELECT 1 
+  FROM likes 
+  WHERE user_id = $1 AND tweet_id = $2
+)
+`
+
+type GetLikeExistsParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, getLikeExists, arg.UserID, arg.TweetID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const getTweet = `-- name: GetTweet :one

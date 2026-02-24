@@ -57,3 +57,30 @@ LIMIT $2 OFFSET $3;
 SELECT COUNT(*)
 FROM tweets
 WHERE user_id = $1;
+
+-- いいね機能
+-- name: CreateLike :one
+INSERT INTO likes (
+  user_id,
+  tweet_id
+) VALUES (
+  $1, $2
+)
+RETURNING *;
+
+-- name: DeleteLike :exec
+DELETE 
+FROM likes
+WHERE user_id = $1 AND tweet_id = $2;
+
+-- name: GetLikeExists :one
+SELECT EXISTS (
+  SELECT 1 
+  FROM likes 
+  WHERE user_id = $1 AND tweet_id = $2
+);
+
+-- name: GetLikeCountByTweetID :one
+SELECT COUNT(*)
+FROM likes
+WHERE tweet_id = $1;
