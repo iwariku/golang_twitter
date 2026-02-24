@@ -37,7 +37,7 @@ LIMIT $1 OFFSET $2;
 SELECT COUNT(*) FROM tweets;
 
 -- name: GetTweet :one
-SELECT id, user_id, content
+SELECT *
 FROM tweets
 WHERE id = $1;
 

@@ -176,21 +176,20 @@ func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (b
 }
 
 const getTweet = `-- name: GetTweet :one
-SELECT id, user_id, content
+SELECT id, user_id, content, created_at
 FROM tweets
 WHERE id = $1
 `
 
-type GetTweetRow struct {
-	ID      int32  `json:"id"`
-	UserID  int32  `json:"user_id"`
-	Content string `json:"content"`
-}
-
-func (q *Queries) GetTweet(ctx context.Context, id int32) (GetTweetRow, error) {
+func (q *Queries) GetTweet(ctx context.Context, id int32) (Tweet, error) {
 	row := q.db.QueryRow(ctx, getTweet, id)
-	var i GetTweetRow
-	err := row.Scan(&i.ID, &i.UserID, &i.Content)
+	var i Tweet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Content,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
