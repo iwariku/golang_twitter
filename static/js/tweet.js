@@ -115,8 +115,11 @@ const post = () => {
 
 // ツイート詳細
 const getTweet = async () => {
-  let id = urlParams.get('id') || 1;
-  const response = await fetch(`/api/tweet-detail?id=${id}`);
+  // 現在のパス (/user-detail/1) から最後の部分を取り出す
+  const pathParts = window.location.pathname.split('/');
+  const tweetId = pathParts[pathParts.length - 1];
+  // let id = urlParams.get('id') || 1;
+  const response = await fetch(`/api/tweets/${tweetId}`);
   const data = await response.json();
 
   container = document.getElementById('tweet-detail-container');
@@ -126,20 +129,23 @@ const getTweet = async () => {
 
 const dispatchPathTask = async () => {
   const path = window.location.pathname;
-  const params = new URLSearchParams(window.location.search);
+  const pathParts = path.split('/');
+  const idFromPath = pathParts[pathParts.length - 1];
 
   if (path.includes('home')) {
     currentApiUrl = '/api/tweets';
     loadTweets();
     setupPagination();
   } else if (path.includes('user-detail')) {
-    const userId = params.get('id');
-    if (!userId) return;
-
+    // クエリパラメータではなく、パスから取ったIDをチェック
+    if (!idFromPath || isNaN(idFromPath)) {
+      console.error('IDがパスに含まれていません');
+      return;
+    }
     // 先にユーザー情報を取得して画面に出す（終わるまで次へ行かない
     // 先にDBにアクセスしてデータの取得に失敗したため
     await getUser();
-    currentApiUrl = `/api/user-tweets?id=${userId}`;
+    currentApiUrl = `/api/users/${idFromPath}/tweets`;
     loadTweets();
     setupPagination();
   } else if (path.includes('post')) {

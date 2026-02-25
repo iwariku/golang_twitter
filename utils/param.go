@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ParseQueryInt32(c *gin.Context, key string) (int32, error) {
-	valStr := c.Query(key)
+func ParseParamInt32(c *gin.Context, key string) (int32, error) {
+	valStr := c.Param(key)
 	if valStr == "" {
 		return 0, fmt.Errorf("parameter %s is missing", key)
 	}

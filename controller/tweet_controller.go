@@ -103,7 +103,7 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 }
 
 func (tc *TweetController) GetTweet(c *gin.Context) {
-	id, err := utils.ParseQueryInt32(c, "id")
+	id, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
 		c.JSON(http.StatusBadRequest, "不正なリクエストです")

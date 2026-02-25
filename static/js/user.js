@@ -1,7 +1,14 @@
 const getUser = async () => {
-  const currentParams =
-    new URLSearchParams(window.location.search).get('id') || 1;
-  const response = await fetch(`/api/user-detail?id=${currentParams}`);
+  // 現在のパス (/user-detail/1) から最後の部分を取り出す
+  const pathParts = window.location.pathname.split('/');
+  const userId = pathParts[pathParts.length - 1]; // 一番後ろの "1" を取得
+
+  if (!userId || isNaN(userId)) {
+    console.error('ユーザーIDがURLに含まれていません');
+    return;
+  }
+
+  const response = await fetch(`/api/users/${userId}`);
   const data = await response.json();
 
   console.log('ユーザー情報取得完了');

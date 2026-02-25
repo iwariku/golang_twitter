@@ -157,7 +157,7 @@ func (uc *UserController) Login(c *gin.Context) {
 // c: json形式で返却
 // v: 画面に表示
 func (uc *UserController) GetUser(c *gin.Context) {
-	id, err := utils.ParseQueryInt32(c, "id")
+	id, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
@@ -182,7 +182,7 @@ func (uc *UserController) GetUser(c *gin.Context) {
 }
 
 func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
-	id, err := utils.ParseQueryInt32(c, "id")
+	id, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
