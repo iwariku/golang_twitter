@@ -33,3 +33,9 @@ type PaginatedTweetsResponse struct {
 	Offset int             `json:"offset"`
 	Count  int             `json:"count"`
 }
+
+type TouchActionResultResponse struct {
+	TweetID   int32
+	LikeCount int64
+	IsLiked   bool
+}

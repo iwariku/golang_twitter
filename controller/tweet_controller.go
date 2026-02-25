@@ -121,3 +121,68 @@ func (tc *TweetController) GetTweet(c *gin.Context) {
 
 	c.JSON(http.StatusOK, tweetRes)
 }
+
+// いいね機能
+// バックエンドでツイートの有無の状態を確認する
+
+// 1. 今何のツイートとユーザーIDなのかを確認する
+// 2. 1.の情報を使いDBに該当するツイートがあるかを確認する
+// 3. 2.の結果を元に条件分岐でcreateLikeかdeleteLikeかを決める
+// 4. データを整形してレスポンスを返す
+func (tc *TweetController) ToggleLike(c *gin.Context) {
+	var currentLikeStatus bool
+
+	userId, err := utils.ParseQueryInt32(c, "user_id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_idの形式が正しくありません"})
+	}
+	tweetId, err := utils.ParseQueryInt32(c, "tweet_id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+	}
+
+	// Likeを持つ == DBにレコードがある
+	hasLiked, err := tc.Queries.GetLikeExists(c.Request.Context(), db.GetLikeExistsParams{
+		UserID:  userId,
+		TweetID: tweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがDBにありません"})
+		return
+	}
+
+	if hasLiked {
+		err := tc.Queries.DeleteLike(c.Request.Context(), db.DeleteLikeParams{
+			UserID:  userId,
+			TweetID: tweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました: %v", err)
+			c.JSON(http.StatusNotFound, gin.H{"error": "いいねの削除操作を完了できませんでした"})
+			return
+		}
+		currentLikeStatus = false
+	} else {
+		_, err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
+			UserID:  userId,
+			TweetID: tweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました: %v", err)
+			c.JSON(http.StatusNotFound, gin.H{"error": "いいねの登録操作を完了できませんでした"})
+			return
+		}
+		currentLikeStatus = true
+	}
+
+	likeCount, err := tc.Queries.GetLikeCountByTweetID(c.Request.Context(), tweetId)
+
+	touchActionResultRes := TouchActionResultResponse{
+		TweetID:   tweetId,
+		LikeCount: likeCount,
+		IsLiked:   currentLikeStatus,
+	}
+
+	c.JSON(http.StatusOK, touchActionResultRes)
+
+}

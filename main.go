@@ -68,6 +68,8 @@ func main() {
 		})
 		authGroup.GET("/api/users/:id", uc.GetUser)
 		authGroup.GET("/api/users/:id/tweets", uc.GetTweetsByUserID)
+
+		authGroup.GET("/api/like-count", tc.ToggleLike)
 	}
 
 	r.Run()
