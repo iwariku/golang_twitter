@@ -40,3 +40,20 @@ SELECT COUNT(*) FROM tweets;
 SELECT id, user_id, content
 FROM tweets
 WHERE id = $1;
+
+-- name: GetUser :one
+SELECT * 
+FROM users
+WHERE id = $1;
+
+-- name: GetTweetsByUserID :many
+SELECT *
+FROM tweets
+WHERE user_id = $1
+ORDER BY id DESC
+LIMIT $2 OFFSET $3;
+
+-- name: GetTweetCountByUserID :one
+SELECT COUNT(*)
+FROM tweets
+WHERE user_id = $1;

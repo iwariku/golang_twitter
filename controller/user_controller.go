@@ -149,3 +149,79 @@ func (uc *UserController) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "ログインに成功しました"})
 	log.Printf("ログインできました")
 }
+
+// ユーザー詳細
+// v: クライアントからuser_idの情報を叩くfetchAPI
+// c: dbにアクセスできる形式に変形
+// m: user_idを元にdbにデータを取得しにいく
+// c: json形式で返却
+// v: 画面に表示
+func (uc *UserController) GetUser(c *gin.Context) {
+	id, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
+		return
+	}
+
+	user, err := uc.Queries.GetUser(c.Request.Context(), id)
+	if err != nil {
+		log.Printf("DBからの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBからの取得に失敗しました"})
+		return
+	}
+
+	UserRes := UserResponse{
+		UserName:         user.UserName.String,
+		SelfIntroduction: user.SelfIntroduction.String,
+		DateOfBirth:      user.DateOfBirth.Time,
+		ProfileImage:     user.ProfileImage.String,
+	}
+
+	c.JSON(http.StatusOK, UserRes)
+}
+
+func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
+	id, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
+		return
+	}
+
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+		return
+	}
+
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+		return
+	}
+
+	totalCount, err := uc.Queries.GetTweetCountByUserID(c.Request.Context(), id)
+	if err != nil {
+		log.Printf("件数取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
+	}
+
+	// ユーザー詳細用ツイート一覧成型
+	tweets, err := uc.Queries.GetTweetsByUserID(c.Request.Context(), db.GetTweetsByUserIDParams{
+		UserID: id,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		log.Printf("データの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	paginatedTweetsResponse := FormatPaginatedTweetsResponse(tweets, limit, offset, totalCount)
+
+	c.JSON(http.StatusOK, paginatedTweetsResponse)
+
+}
