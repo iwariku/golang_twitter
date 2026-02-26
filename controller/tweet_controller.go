@@ -132,13 +132,21 @@ func (tc *TweetController) GetTweet(c *gin.Context) {
 func (tc *TweetController) ToggleLike(c *gin.Context) {
 	var currentLikeStatus bool
 
-	userId, err := utils.ParseQueryInt32(c, "user_id")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_idの形式が正しくありません"})
-	}
-	tweetId, err := utils.ParseQueryInt32(c, "tweet_id")
+	// userId, err := GetUserIDFromContext(c)
+	// if err != nil {
+	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+	// 	return
+	// }
+
+	// ===========================
+	// 一旦userIdを1と固定して進める
+	// ===========================
+	userId := int32(1)
+
+	tweetId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
 	}
 
 	// Likeを持つ == DBにレコードがある

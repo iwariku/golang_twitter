@@ -6,6 +6,7 @@ import "golang_twitter/db"
 // 拡張性を意識し、引数はDBモデルそのものを渡す。
 func FormatTweetResponse(t db.Tweet) TweetResponse {
 	return TweetResponse{
+		ID:      t.ID,
 		UserID:  t.UserID,
 		Content: t.Content,
 	}
