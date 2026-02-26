@@ -73,6 +73,7 @@ DELETE
 FROM likes
 WHERE user_id = $1 AND tweet_id = $2;
 
+-- GetTweetWithLikesの単体SQL
 -- name: GetLikeExists :one
 SELECT EXISTS (
   SELECT 1 
@@ -80,7 +81,39 @@ SELECT EXISTS (
   WHERE user_id = $1 AND tweet_id = $2
 );
 
+-- GetTweetWithLikesの単体SQL
 -- name: GetLikeCountByTweetID :one
 SELECT COUNT(*)
 FROM likes
 WHERE tweet_id = $1;
+
+-- name: GetTweetWithLikes :one
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
+  EXISTS (
+    SELECT 1
+    FROM likes l
+    WHERE l.tweet_id = t.id AND l.user_id = $1
+  ) AS is_liked
+FROM tweets t
+WHERE t.id = $2;
+
+-- name: GetTweetsWithLikes :many
+SELECT 
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
+  EXISTS (
+    SELECT 1
+    FROM likes l
+    WHERE l.tweet_id = t.id AND l.user_id = $1
+  ) AS is_liked
+FROM tweets t
+ORDER BY t.created_at DESC
+LIMIT $2 OFFSET $3;
