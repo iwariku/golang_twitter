@@ -28,8 +28,12 @@ type TweetResponse struct {
 	ID      int32  `json:"id"`
 	UserID  int32  `json:"user_id"`
 	Content string `json:"content"`
+	// ここにいいねとカウント数を足す
+	LikeCount int64 `json:"like_count"`
+	IsLiked   bool  `json:"is_liked"`
 }
 
+// この構造体はそのままでいいんじゃない？ツイート一覧を返却するのであれば
 type PaginatedTweetsResponse struct {
 	Tweets []TweetResponse `json:"tweets"`
 	Limit  int             `json:"limit"`

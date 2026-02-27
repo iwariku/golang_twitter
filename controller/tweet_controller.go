@@ -66,7 +66,55 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 	c.JSON(http.StatusCreated, tweetRes)
 }
 
-func (tc *TweetController) GetTweets(c *gin.Context) {
+// func (tc *TweetController) GetTweets(c *gin.Context) {
+// 	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が違います"})
+// 		return
+// 	}
+
+// 	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が違います"})
+// 		return
+// 	}
+
+// 	// 件数取得
+// 	totalCount, err := tc.Queries.GetTweetCount(c.Request.Context())
+// 	if err != nil {
+// 		log.Printf("件数取得に失敗しました")
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗失敗しました"})
+// 		return
+// 	}
+
+// 	tweets, err := tc.Queries.GetTweets(c.Request.Context(), db.GetTweetsParams{
+// 		Limit:  limit,
+// 		Offset: offset,
+// 	})
+// 	if err != nil {
+// 		log.Printf("DBからの取得に失敗: %v", err)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBからの取得に失敗しました"})
+// 		return
+// 	}
+
+// 	paginatedTweetsResponse := FormatPaginatedTweetsResponse(tweets, limit, offset, totalCount)
+
+// 	c.JSON(http.StatusOK, paginatedTweetsResponse)
+// }
+
+// ===================
+// いいねツイート一覧機能
+// ===================
+// 最終的にこちらを使用する。(問題がなければGetTweetsに命名変更)
+func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
+	//ログインユーザーの取得はここだろうと予想
+	userID, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
 	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が違います"})
@@ -79,7 +127,6 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 		return
 	}
 
-	// 件数取得
 	totalCount, err := tc.Queries.GetTweetCount(c.Request.Context())
 	if err != nil {
 		log.Printf("件数取得に失敗しました")
@@ -87,19 +134,19 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 		return
 	}
 
-	tweets, err := tc.Queries.GetTweets(c.Request.Context(), db.GetTweetsParams{
+	dbTweets, err := tc.Queries.GetTweetsWithLikes(c.Request.Context(), db.GetTweetsWithLikesParams{
+		UserID: userID,
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		log.Printf("DBからの取得に失敗: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBからの取得に失敗しました"})
 		return
 	}
 
-	paginatedTweetsResponse := FormatPaginatedTweetsResponse(tweets, limit, offset, totalCount)
+	paginatedTweetsRes := FormatPaginatedWithLikeTweetsResponse(dbTweets, limit, offset, totalCount)
 
-	c.JSON(http.StatusOK, paginatedTweetsResponse)
+	c.JSON(http.StatusOK, paginatedTweetsRes)
 }
 
 func (tc *TweetController) GetTweet(c *gin.Context) {
