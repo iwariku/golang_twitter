@@ -42,8 +42,8 @@ const createTweetCard = (tweet) => {
           <span class="font-bold text-[15px] hover:underline">User ID: ${tweet.user_id}</span>
         </div>
         <p class="text-[15px] leading-5 mt-1 whitespace-pre-wrap">${tweet.content}</p>
-        <button class="js-like-btn">♡</button> 
-        <span class="js-like-count">0</span>
+        <button class="js-like-btn">${tweet.is_liked ? '❤️' : '♡'}</button> 
+        <span class="js-like-count">${tweet.like_count}</span>
       </div>
     </div>`;
 

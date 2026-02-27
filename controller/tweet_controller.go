@@ -179,16 +179,11 @@ func (tc *TweetController) GetTweet(c *gin.Context) {
 func (tc *TweetController) ToggleLike(c *gin.Context) {
 	var currentLikeStatus bool
 
-	// userId, err := GetUserIDFromContext(c)
-	// if err != nil {
-	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
-	// 	return
-	// }
-
-	// ===========================
-	// 一旦userIdを1と固定して進める
-	// ===========================
-	userId := int32(1)
+	userId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
 
 	tweetId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
