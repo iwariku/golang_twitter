@@ -28,30 +28,13 @@ INSERT INTO tweets (
 )
 RETURNING *;
 
--- name: GetTweets :many
-SELECT * FROM tweets
-ORDER BY id DESC
-LIMIT $1 OFFSET $2;
-
 -- name: GetTweetCount :one
 SELECT COUNT(*) FROM tweets;
-
--- name: GetTweet :one
-SELECT *
-FROM tweets
-WHERE id = $1;
 
 -- name: GetUser :one
 SELECT * 
 FROM users
 WHERE id = $1;
-
--- name: GetTweetsByUserID :many
-SELECT *
-FROM tweets
-WHERE user_id = $1
-ORDER BY id DESC
-LIMIT $2 OFFSET $3;
 
 -- name: GetTweetsByUserIDWithLikes :many
 SELECT
@@ -98,12 +81,6 @@ SELECT EXISTS (
   FROM likes 
   WHERE user_id = $1 AND tweet_id = $2
 );
-
--- GetTweetWithLikesの単体SQL
--- name: GetLikeCountByTweetID :one
-SELECT COUNT(*)
-FROM likes
-WHERE tweet_id = $1;
 
 -- name: GetTweetWithLikes :one
 SELECT

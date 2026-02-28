@@ -142,20 +142,6 @@ func (q *Queries) DeleteLike(ctx context.Context, arg DeleteLikeParams) error {
 	return err
 }
 
-const getLikeCountByTweetID = `-- name: GetLikeCountByTweetID :one
-SELECT COUNT(*)
-FROM likes
-WHERE tweet_id = $1
-`
-
-// GetTweetWithLikesの単体SQL
-func (q *Queries) GetLikeCountByTweetID(ctx context.Context, tweetID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, getLikeCountByTweetID, tweetID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const getLikeExists = `-- name: GetLikeExists :one
 SELECT EXISTS (
   SELECT 1 
@@ -175,24 +161,6 @@ func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (b
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
-}
-
-const getTweet = `-- name: GetTweet :one
-SELECT id, user_id, content, created_at
-FROM tweets
-WHERE id = $1
-`
-
-func (q *Queries) GetTweet(ctx context.Context, id int32) (Tweet, error) {
-	row := q.db.QueryRow(ctx, getTweet, id)
-	var i Tweet
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Content,
-		&i.CreatedAt,
-	)
-	return i, err
 }
 
 const getTweetCount = `-- name: GetTweetCount :one
@@ -261,81 +229,6 @@ func (q *Queries) GetTweetWithLikes(ctx context.Context, arg GetTweetWithLikesPa
 		&i.IsLiked,
 	)
 	return i, err
-}
-
-const getTweets = `-- name: GetTweets :many
-SELECT id, user_id, content, created_at FROM tweets
-ORDER BY id DESC
-LIMIT $1 OFFSET $2
-`
-
-type GetTweetsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-func (q *Queries) GetTweets(ctx context.Context, arg GetTweetsParams) ([]Tweet, error) {
-	rows, err := q.db.Query(ctx, getTweets, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Tweet
-	for rows.Next() {
-		var i Tweet
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Content,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getTweetsByUserID = `-- name: GetTweetsByUserID :many
-SELECT id, user_id, content, created_at
-FROM tweets
-WHERE user_id = $1
-ORDER BY id DESC
-LIMIT $2 OFFSET $3
-`
-
-type GetTweetsByUserIDParams struct {
-	UserID int32 `json:"user_id"`
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-func (q *Queries) GetTweetsByUserID(ctx context.Context, arg GetTweetsByUserIDParams) ([]Tweet, error) {
-	rows, err := q.db.Query(ctx, getTweetsByUserID, arg.UserID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Tweet
-	for rows.Next() {
-		var i Tweet
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Content,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getTweetsByUserIDWithLikes = `-- name: GetTweetsByUserIDWithLikes :many
