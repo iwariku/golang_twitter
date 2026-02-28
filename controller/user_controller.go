@@ -181,11 +181,21 @@ func (uc *UserController) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, UserRes)
 }
 
+// ===========================
+// これは前のコード出来上がりしたい消す。
+// ===========================
 func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
-	id, err := utils.ParseParamInt32(c, "id")
+	targetUserId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
+		return
+	}
+
+	viewerUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
 		return
 	}
 
@@ -201,18 +211,18 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 		return
 	}
 
-	totalCount, err := uc.Queries.GetTweetCountByUserID(c.Request.Context(), id)
+	totalCount, err := uc.Queries.GetTweetCountByUserID(c.Request.Context(), targetUserId)
 	if err != nil {
 		log.Printf("件数取得に失敗しました")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
 		return
 	}
 
-	// ユーザー詳細用ツイート一覧成型
-	tweets, err := uc.Queries.GetTweetsByUserID(c.Request.Context(), db.GetTweetsByUserIDParams{
-		UserID: id,
-		Limit:  limit,
-		Offset: offset,
+	dbTweets, err := uc.Queries.GetTweetsByUserIDWithLikes(c.Request.Context(), db.GetTweetsByUserIDWithLikesParams{
+		TargetUserID: targetUserId,
+		ViewerUserID: viewerUserId,
+		LimitVal:     limit,
+		OffsetVal:    offset,
 	})
 	if err != nil {
 		log.Printf("データの取得に失敗しました: %v", err)
@@ -220,8 +230,22 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 		return
 	}
 
-	paginatedTweetsResponse := FormatPaginatedTweetsResponse(tweets, limit, offset, totalCount)
+	tweetsRes := make([]TweetResponse, len(dbTweets))
+	for i, t := range dbTweets {
+		tweetsRes[i] = TweetResponse{
+			ID:        t.ID,
+			UserID:    t.UserID,
+			Content:   t.Content,
+			LikeCount: t.LikeCount,
+			IsLiked:   t.IsLiked,
+		}
+	}
 
-	c.JSON(http.StatusOK, paginatedTweetsResponse)
+	c.JSON(http.StatusOK, PaginatedTweetsResponse{
+		Tweets: tweetsRes,
+		Limit:  int(limit),
+		Offset: int(offset),
+		Count:  int(totalCount),
+	})
 
 }

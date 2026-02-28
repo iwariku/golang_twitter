@@ -53,6 +53,24 @@ WHERE user_id = $1
 ORDER BY id DESC
 LIMIT $2 OFFSET $3;
 
+-- name: GetTweetsByUserIDWithLikes :many
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
+  EXISTS (
+    SELECT 1
+    FROM likes l
+    WHERE l.tweet_id = t.id AND l.user_id = @viewer_user_id::int
+  ) AS is_liked
+FROM tweets t
+WHERE t.user_id = @target_user_id::int
+ORDER BY t.created_at DESC
+LIMIT @limit_val::int OFFSET @offset_val::int;
+
+
 -- name: GetTweetCountByUserID :one
 SELECT COUNT(*)
 FROM tweets

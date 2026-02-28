@@ -148,6 +148,7 @@ FROM likes
 WHERE tweet_id = $1
 `
 
+// GetTweetWithLikesの単体SQL
 func (q *Queries) GetLikeCountByTweetID(ctx context.Context, tweetID int32) (int64, error) {
 	row := q.db.QueryRow(ctx, getLikeCountByTweetID, tweetID)
 	var count int64
@@ -168,6 +169,7 @@ type GetLikeExistsParams struct {
 	TweetID int32 `json:"tweet_id"`
 }
 
+// GetTweetWithLikesの単体SQL
 func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (bool, error) {
 	row := q.db.QueryRow(ctx, getLikeExists, arg.UserID, arg.TweetID)
 	var exists bool
@@ -233,7 +235,6 @@ FROM tweets t
 WHERE t.id = $2
 `
 
-// GetTweetsWithLikesRowの単体SQL
 type GetTweetWithLikesParams struct {
 	UserID int32 `json:"user_id"`
 	ID     int32 `json:"id"`
@@ -337,6 +338,72 @@ func (q *Queries) GetTweetsByUserID(ctx context.Context, arg GetTweetsByUserIDPa
 	return items, nil
 }
 
+const getTweetsByUserIDWithLikes = `-- name: GetTweetsByUserIDWithLikes :many
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
+  EXISTS (
+    SELECT 1
+    FROM likes l
+    WHERE l.tweet_id = t.id AND l.user_id = $1::int
+  ) AS is_liked
+FROM tweets t
+WHERE t.user_id = $2::int
+ORDER BY t.created_at DESC
+LIMIT $4::int OFFSET $3::int
+`
+
+type GetTweetsByUserIDWithLikesParams struct {
+	ViewerUserID int32 `json:"viewer_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
+}
+
+type GetTweetsByUserIDWithLikesRow struct {
+	ID        int32            `json:"id"`
+	UserID    int32            `json:"user_id"`
+	Content   string           `json:"content"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	LikeCount int64            `json:"like_count"`
+	IsLiked   bool             `json:"is_liked"`
+}
+
+func (q *Queries) GetTweetsByUserIDWithLikes(ctx context.Context, arg GetTweetsByUserIDWithLikesParams) ([]GetTweetsByUserIDWithLikesRow, error) {
+	rows, err := q.db.Query(ctx, getTweetsByUserIDWithLikes,
+		arg.ViewerUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTweetsByUserIDWithLikesRow
+	for rows.Next() {
+		var i GetTweetsByUserIDWithLikesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Content,
+			&i.CreatedAt,
+			&i.LikeCount,
+			&i.IsLiked,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTweetsWithLikes = `-- name: GetTweetsWithLikes :many
 SELECT 
   t.id,
@@ -354,7 +421,6 @@ ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
-// GetTweetsWithLikesRowの単体SQL
 type GetTweetsWithLikesParams struct {
 	UserID int32 `json:"user_id"`
 	Limit  int32 `json:"limit"`
