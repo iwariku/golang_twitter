@@ -16,29 +16,15 @@ func FormatTweetResponse(t db.Tweet) TweetResponse {
 	}
 }
 
-// ページネーション付きで返す
-// ユーザー一覧(フォローフォロワーのタスク)でもページネーションは使うため先に分けておく
-func FormatPaginatedTweetsResponse(tweets []db.Tweet, limit, offset int32, totalCount int64) PaginatedTweetsResponse {
-	var tweetsRes []TweetResponse
-	for _, t := range tweets {
-		tweetsRes = append(tweetsRes, FormatTweetResponse(t))
-	}
-
-	return PaginatedTweetsResponse{
-		Tweets: tweetsRes,
-		Limit:  int(limit),
-		Offset: int(offset),
-		Count:  int(totalCount),
-	}
-}
-
 // ==================
 // ツイート(いいね数と状態を持つ)レスポンスを返却
 // ==================
 
-// いいね月ツイートをAPIレスポンス用の構造体に変換する
+// いいね付きツイートをAPIレスポンス用の構造体に変換する
 // リツイートとブックマーク機能もここに足す。その時に命名変更
 // ツイートだけをレスポンスするFormatTweetResponseを使わずこちらをメインにする
+// -> sqlcで自動生成される型が違う問題が出てくるためこのformatはページネーション付きでしか使えない
+// -> マッピングはcontroller内の方がいいと思う
 func FormatTweetWithLikeResponse(t db.GetTweetsWithLikesRow) TweetResponse {
 	return TweetResponse{
 		ID:        t.ID,
