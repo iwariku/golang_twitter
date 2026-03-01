@@ -50,6 +50,33 @@ func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) (Like, e
 	return i, err
 }
 
+const createRetweet = `-- name: CreateRetweet :one
+INSERT INTO retweets (
+  user_id,
+  tweet_id
+) VALUES (
+  $1, $2
+)
+RETURNING id, user_id, tweet_id, created_at
+`
+
+type CreateRetweetParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+func (q *Queries) CreateRetweet(ctx context.Context, arg CreateRetweetParams) (Retweet, error) {
+	row := q.db.QueryRow(ctx, createRetweet, arg.UserID, arg.TweetID)
+	var i Retweet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TweetID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createTweet = `-- name: CreateTweet :one
 INSERT INTO tweets (
   user_id,
@@ -142,6 +169,22 @@ func (q *Queries) DeleteLike(ctx context.Context, arg DeleteLikeParams) error {
 	return err
 }
 
+const deleteRetweet = `-- name: DeleteRetweet :exec
+DELETE
+FROM retweets
+WHERE user_id = $1 AND tweet_id = $2
+`
+
+type DeleteRetweetParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+func (q *Queries) DeleteRetweet(ctx context.Context, arg DeleteRetweetParams) error {
+	_, err := q.db.Exec(ctx, deleteRetweet, arg.UserID, arg.TweetID)
+	return err
+}
+
 const getLikeExists = `-- name: GetLikeExists :one
 SELECT EXISTS (
   SELECT 1 
@@ -158,6 +201,26 @@ type GetLikeExistsParams struct {
 // GetTweetWithLikesの単体SQL
 func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (bool, error) {
 	row := q.db.QueryRow(ctx, getLikeExists, arg.UserID, arg.TweetID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getRetweetExists = `-- name: GetRetweetExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM retweets
+  WHERE user_id = $1 AND tweet_id = $2
+)
+`
+
+type GetRetweetExistsParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+func (q *Queries) GetRetweetExists(ctx context.Context, arg GetRetweetExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, getRetweetExists, arg.UserID, arg.TweetID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err

@@ -69,9 +69,23 @@ INSERT INTO likes (
 )
 RETURNING *;
 
+-- name: CreateRetweet :one
+INSERT INTO retweets (
+  user_id,
+  tweet_id
+) VALUES (
+  $1, $2
+)
+RETURNING *;
+
 -- name: DeleteLike :exec
 DELETE 
 FROM likes
+WHERE user_id = $1 AND tweet_id = $2;
+
+-- name: DeleteRetweet :exec
+DELETE
+FROM retweets
 WHERE user_id = $1 AND tweet_id = $2;
 
 -- GetTweetWithLikesの単体SQL
@@ -79,6 +93,13 @@ WHERE user_id = $1 AND tweet_id = $2;
 SELECT EXISTS (
   SELECT 1 
   FROM likes 
+  WHERE user_id = $1 AND tweet_id = $2
+);
+
+-- name: GetRetweetExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM retweets
   WHERE user_id = $1 AND tweet_id = $2
 );
 
