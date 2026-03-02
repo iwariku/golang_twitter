@@ -72,6 +72,7 @@ func main() {
 
 		authGroup.POST("/api/tweets/:id/like", tc.CreateLike)
 		authGroup.DELETE("/api/tweets/:id/like", tc.DeleteLike)
+
 	}
 
 	r.Run()
