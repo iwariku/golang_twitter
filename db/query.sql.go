@@ -193,14 +193,12 @@ SELECT
   t.user_id,
   t.content,
   t.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = $1
-  ) AS is_liked
+  COUNT(l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
 FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
 WHERE t.id = $2
+GROUP BY t.id
 `
 
 type GetTweetWithLikesParams struct {
@@ -237,20 +235,19 @@ SELECT
   t.user_id,
   t.content,
   t.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = $1::int
-  ) AS is_liked
+  COUNT (l.id) AS like_count,
+  -- 条件に合う行が存在した時1とする。この1でtrue/falseを判断する
+  MAX(CASE WHEN l.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_liked
 FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
 WHERE t.user_id = $2::int
+GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT $4::int OFFSET $3::int
 `
 
 type GetTweetsByUserIDWithLikesParams struct {
-	ViewerUserID int32 `json:"viewer_user_id"`
+	LoggedUserID int32 `json:"logged_user_id"`
 	TargetUserID int32 `json:"target_user_id"`
 	OffsetVal    int32 `json:"offset_val"`
 	LimitVal     int32 `json:"limit_val"`
@@ -267,7 +264,7 @@ type GetTweetsByUserIDWithLikesRow struct {
 
 func (q *Queries) GetTweetsByUserIDWithLikes(ctx context.Context, arg GetTweetsByUserIDWithLikesParams) ([]GetTweetsByUserIDWithLikesRow, error) {
 	rows, err := q.db.Query(ctx, getTweetsByUserIDWithLikes,
-		arg.ViewerUserID,
+		arg.LoggedUserID,
 		arg.TargetUserID,
 		arg.OffsetVal,
 		arg.LimitVal,
@@ -303,13 +300,11 @@ SELECT
   t.user_id,
   t.content,
   t.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = $1
-  ) AS is_liked
+  COUNT(l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
 FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3
 `

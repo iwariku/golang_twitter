@@ -42,17 +42,15 @@ SELECT
   t.user_id,
   t.content,
   t.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = @viewer_user_id::int
-  ) AS is_liked
+  COUNT (l.id) AS like_count,
+  -- 条件に合う行が存在した時1とする。この1でtrue/falseを判断する
+  MAX(CASE WHEN l.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_liked
 FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
 WHERE t.user_id = @target_user_id::int
+GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT @limit_val::int OFFSET @offset_val::int;
-
 
 -- name: GetTweetCountByUserID :one
 SELECT COUNT(*)
@@ -88,14 +86,13 @@ SELECT
   t.user_id,
   t.content,
   t.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = $1
-  ) AS is_liked
+  COUNT(l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
 FROM tweets t
-WHERE t.id = $2;
+LEFT JOIN likes l ON l.tweet_id = t.id
+WHERE t.id = $2
+GROUP BY t.id;
+
 
 -- name: GetTweetsWithLikes :many
 SELECT 
@@ -103,12 +100,10 @@ SELECT
   t.user_id,
   t.content,
   t.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = $1
-  ) AS is_liked
+  COUNT(l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
 FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3;
