@@ -136,71 +136,57 @@ LIMIT $2 OFFSET $3;
 
 -- リツイート機能
 -- ツイート詳細、いいね、リツイート付き(リツイートができたら巻き替え)
--- name: GetTweetsWithLikeAndRetweet :one
+-- name: GetTweetWithLikesWithRetweets :one
 SELECT
   t.id,
   t.user_id,
   t.content,
   t.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = $1
-  ) AS is_liked,
-  (SELECT COUNT(*) FROM retweets r WHERE r.tweet_id = t.id ) AS retweet_count,
-  EXISTS (
-    SELECT 1
-    FROM retweets r
-    WHERE r.tweet_id = t.id AND r.user_id = $1
-  ) AS is_retweeted
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT r.id) AS retweet_count,
+  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
 FROM tweets t
-WHERE t.id = $2;
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN retweets r ON r.tweet_id = t.id
+WHERE t.id = $2
+GROUP BY t.id;
+
 
 -- ツイート一覧、いいね、リツイート付き(リツイートができたら巻き替え)
--- name: GetTweetsWithRetweet :many
+-- name: GetTweetsWithLikesWithRetweets :many
 SELECT
   t.id,
   t.user_id,
   t.content,
   t.created_at,
-    (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = $1
-  ) AS is_liked,
-  (SELECT COUNT(*) FROM retweets r WHERE r.tweet_id = t.id) AS retweet_count,
-  EXISTS (
-    SELECT 1
-    FROM retweets r
-    WHERE r.tweet_id = t.id AND r.user_id = $1
-  ) AS is_retweeted
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT r.id) AS retweet_count,
+  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
 FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN retweets r ON r.tweet_id = t.id
+GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- ユーザー詳細でのツイート一覧、いいね、リツイート付き(リツイートができたら巻き替え)
--- name: GetTweetsByUserIDWithRetweet :many
+-- name: GetTweetsByUserIDWithLikesWithRetweets :many
 SELECT
   t.id,
   t.user_id,
   t.content,
   t.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = @viewer_user_id::int
-  ) AS is_liked,
-  (SELECT COUNT(*) FROM retweets r WHERE r.tweet_id = t.id) AS retweet_count,
-  EXISTS (
-    SELECT 1
-    FROM retweets r
-    WHERE r.tweet_id = t.id AND r.user_id = @viewer_user_id::int
-  ) AS is_retweeted
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT r.id) AS retweet_count,
+  MAX(CASE WHEN r.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_retweeted
 FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN  retweets r ON r.tweet_id = t.id
 WHERE t.user_id = @target_user_id::int
+GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT @limit_val::int OFFSET @offset_val::int;
 
@@ -211,21 +197,15 @@ SELECT
   t.user_id,
   t.content,
   user_retweets.created_at,
-  (SELECT COUNT(*) FROM likes l WHERE l.tweet_id = t.id) AS like_count,
-  EXISTS (
-    SELECT 1
-    FROM likes l
-    WHERE l.tweet_id = t.id AND l.user_id = $1
-  ) AS is_liked,
-
-  (SELECT COUNT(*) FROM retweets viewer_retweet WHERE viewer_retweet.tweet_id = t.id ) AS retweet_count,
-  EXISTS (
-    SELECT 1
-    FROM retweets viewer_retweet
-    WHERE viewer_retweet.tweet_id = t.id AND viewer_retweet.user_id = $1
-  ) AS is_retweeted
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT all_retweets.id) AS retweet_count,
+  MAX(CASE WHEN all_retweets.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
 FROM retweets user_retweets
 JOIN tweets t ON user_retweets.tweet_id = t.id
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN  retweets all_retweets ON all_retweets.tweet_id = t.id
 WHERE user_retweets.user_id = $2
+GROUP BY t.id, user_retweets.created_at
 ORDER BY user_retweets.created_at DESC
 LIMIT $3 OFFSET $4;
