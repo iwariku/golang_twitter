@@ -157,7 +157,7 @@ func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
 // 2. 1.の情報を使いDBに該当するツイートがあるかを確認する
 // 3. 2.の結果を元に条件分岐でcreateLikeかdeleteLikeかを決める
 // 4. データを整形してレスポンスを返す
-func (tc *TweetController) ToggleLike(c *gin.Context) {
+func (tc *TweetController) DeleteLike(c *gin.Context) {
 
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
@@ -181,7 +181,7 @@ func (tc *TweetController) ToggleLike(c *gin.Context) {
 		return
 	}
 
-	if hasLiked {
+	if hasLiked == true {
 		err := tc.Queries.DeleteLike(c.Request.Context(), db.DeleteLikeParams{
 			UserID:  loggedUserId,
 			TweetID: tweetId,
@@ -191,7 +191,52 @@ func (tc *TweetController) ToggleLike(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "いいねの削除操作を完了できませんでした"})
 			return
 		}
-	} else {
+	}
+
+	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+		UserID: loggedUserId,
+		ID:     tweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "同期に失敗しました"})
+		return
+	}
+
+	touchActionResultRes := TouchActionResultResponse{
+		TweetID:   tweetId,
+		LikeCount: dbTweets.LikeCount,
+		IsLiked:   dbTweets.IsLiked,
+	}
+
+	c.JSON(http.StatusOK, touchActionResultRes)
+
+}
+
+func (tc *TweetController) CreateLike(c *gin.Context) {
+
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	tweetId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
+	}
+
+	// Likeを持つ == DBにレコードがある
+	hasLiked, err := tc.Queries.GetLikeExists(c.Request.Context(), db.GetLikeExistsParams{
+		UserID:  loggedUserId,
+		TweetID: tweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがDBにありません"})
+		return
+	}
+
+	if hasLiked == false {
 		_, err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
 			UserID:  loggedUserId,
 			TweetID: tweetId,

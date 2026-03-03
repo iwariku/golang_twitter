@@ -7,22 +7,22 @@ let currentApiUrl = '';
 // いいね機能
 const setupLikeButton = (btn, tweetId, countLabel) => {
   btn.addEventListener('click', async () => {
-    const response = await fetch(`/api/tweets/${tweetId}/like`, {
-      method: 'POST',
-    });
+    const isLiked = btn.dataset.isLiked === 'true';
+    const method = isLiked ? 'DELETE' : 'POST';
 
+    const response = await fetch(`/api/tweets/${tweetId}/like`, {
+      method: method,
+    });
     if (!response.ok) {
       console.error('サーバーエラーが発生しました', response.status);
       return;
     }
 
     const data = await response.json();
+
+    btn.dataset.isLiked = data.is_liked;
     countLabel.textContent = data.like_count;
-    if (data.is_liked) {
-      btn.textContent = '❤️';
-    } else {
-      btn.textContent = '♡';
-    }
+    btn.textContent = data.is_liked ? '❤️' : '♡';
   });
 };
 
@@ -42,7 +42,7 @@ const createTweetCard = (tweet) => {
           <span class="font-bold text-[15px] hover:underline">User ID: ${tweet.user_id}</span>
         </div>
         <p class="text-[15px] leading-5 mt-1 whitespace-pre-wrap">${tweet.content}</p>
-        <button class="js-like-btn">${tweet.is_liked ? '❤️' : '♡'}</button> 
+        <button class="js-like-btn" data-is-liked="${tweet.is_liked}">${tweet.is_liked ? '❤️' : '♡'}</button> 
         <span class="js-like-count">${tweet.like_count}</span>
       </div>
     </div>`;
