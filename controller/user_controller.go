@@ -181,9 +181,6 @@ func (uc *UserController) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, UserRes)
 }
 
-// ===========================
-// これは前のコード出来上がりしたい消す。
-// ===========================
 func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 	targetUserId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
@@ -192,7 +189,7 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 		return
 	}
 
-	viewerUserId, err := GetUserIDFromContext(c)
+	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
@@ -220,7 +217,7 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 
 	dbTweets, err := uc.Queries.GetTweetsByUserIDWithLikes(c.Request.Context(), db.GetTweetsByUserIDWithLikesParams{
 		TargetUserID: targetUserId,
-		ViewerUserID: viewerUserId,
+		LoggedUserID: loggedUserId,
 		LimitVal:     limit,
 		OffsetVal:    offset,
 	})

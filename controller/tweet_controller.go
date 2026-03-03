@@ -44,7 +44,7 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	userID, err := GetUserIDFromContext(c)
+	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
@@ -52,7 +52,7 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 	}
 
 	tweet, err := tc.Queries.CreateTweet(c.Request.Context(), db.CreateTweetParams{
-		UserID:  userID,
+		UserID:  loggedUserId,
 		Content: req.Content,
 	})
 	if err != nil {
@@ -70,7 +70,7 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 // いいねツイート一覧機能
 // ===================
 func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
-	viewerUserId, err := GetUserIDFromContext(c)
+	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
@@ -97,7 +97,7 @@ func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
 	}
 
 	dbTweets, err := tc.Queries.GetTweetsWithLikes(c.Request.Context(), db.GetTweetsWithLikesParams{
-		UserID: viewerUserId,
+		UserID: loggedUserId,
 		Limit:  limit,
 		Offset: offset,
 	})
@@ -115,7 +115,7 @@ func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
 // いいね付きツイート詳細機能
 // ===================
 func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
-	viewerUserId, err := GetUserIDFromContext(c)
+	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
@@ -130,7 +130,7 @@ func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
 	}
 
 	dbTweet, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
-		UserID: viewerUserId,
+		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
 	if err != nil {
@@ -159,7 +159,7 @@ func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
 // 4. データを整形してレスポンスを返す
 func (tc *TweetController) ToggleLike(c *gin.Context) {
 
-	userId, err := GetUserIDFromContext(c)
+	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
 		return
@@ -173,7 +173,7 @@ func (tc *TweetController) ToggleLike(c *gin.Context) {
 
 	// Likeを持つ == DBにレコードがある
 	hasLiked, err := tc.Queries.GetLikeExists(c.Request.Context(), db.GetLikeExistsParams{
-		UserID:  userId,
+		UserID:  loggedUserId,
 		TweetID: tweetId,
 	})
 	if err != nil {
@@ -183,7 +183,7 @@ func (tc *TweetController) ToggleLike(c *gin.Context) {
 
 	if hasLiked {
 		err := tc.Queries.DeleteLike(c.Request.Context(), db.DeleteLikeParams{
-			UserID:  userId,
+			UserID:  loggedUserId,
 			TweetID: tweetId,
 		})
 		if err != nil {
@@ -193,7 +193,7 @@ func (tc *TweetController) ToggleLike(c *gin.Context) {
 		}
 	} else {
 		_, err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
-			UserID:  userId,
+			UserID:  loggedUserId,
 			TweetID: tweetId,
 		})
 		if err != nil {
@@ -204,7 +204,7 @@ func (tc *TweetController) ToggleLike(c *gin.Context) {
 	}
 
 	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
-		UserID: userId,
+		UserID: loggedUserId,
 		ID:     tweetId,
 	})
 	if err != nil {
