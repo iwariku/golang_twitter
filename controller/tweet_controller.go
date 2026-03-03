@@ -181,7 +181,7 @@ func (tc *TweetController) DeleteLike(c *gin.Context) {
 		return
 	}
 
-	if hasLiked == true {
+	if hasLiked {
 		err := tc.Queries.DeleteLike(c.Request.Context(), db.DeleteLikeParams{
 			UserID:  loggedUserId,
 			TweetID: tweetId,
