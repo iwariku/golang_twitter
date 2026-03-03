@@ -274,9 +274,9 @@ func (tc *TweetController) CreateLike(c *gin.Context) {
 // dbにレコードがあるか確認
 // 条件分岐であるならdelete、あるならcreate
 // いいねしたレスポンスを返す
-// -> レスポンスの定義は一旦拡張せずに専用のレスポンス構造体を作成しようかな。いいねとリツイートはカウントがいるけど、ブックマークは要らない
-func (tc *TweetController) ToggleRetweet(c *gin.Context) {
-	viewerUserId, err := GetUserIDFromContext(c)
+// -> レスポンスの定義は一旦拡張せずに専用のレスポンス構造体を作成しようかな。いいねとリツイートはカウントがいるけど、ブックマークは要ら
+func (tc *TweetController) DeleteRetweet(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
 		return
@@ -284,44 +284,33 @@ func (tc *TweetController) ToggleRetweet(c *gin.Context) {
 
 	targetTweetId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idのリクエスト形式が正しくありません"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
 		return
 	}
 
-	hasRetweet, err := tc.Queries.GetRetweetExists(c.Request.Context(), db.GetRetweetExistsParams{
-		UserID:  viewerUserId,
+	hasRetweeted, err := tc.Queries.GetRetweetExists(c.Request.Context(), db.GetRetweetExistsParams{
+		UserID:  loggedUserId,
 		TweetID: targetTweetId,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがありません"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "条件に合致するツイートがありません"})
 		return
 	}
 
-	if hasRetweet {
+	if hasRetweeted {
 		err := tc.Queries.DeleteRetweet(c.Request.Context(), db.DeleteRetweetParams{
-			UserID:  viewerUserId,
+			UserID:  loggedUserId,
 			TweetID: targetTweetId,
 		})
 		if err != nil {
-			log.Printf("リツイートの削除に失敗しました")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "リツイートの取り消しに失敗しました"})
-			return
-		}
-	} else {
-		_, err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
-			UserID:  viewerUserId,
-			TweetID: targetTweetId,
-		})
-		if err != nil {
-			log.Printf("リツイートの登録に失敗しました")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "リツイートに失敗しました"})
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "リツイートの削除に失敗しました"})
 			return
 		}
 	}
 
-	// リツイートを含むツイート全般のデータを取得
-	dbTweet, err := tc.Queries.GetTweetsWithLikeAndRetweet(c.Request.Context(), db.GetTweetsWithLikeAndRetweetParams{
-		UserID: viewerUserId,
+	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
 	if err != nil {
@@ -329,19 +318,64 @@ func (tc *TweetController) ToggleRetweet(c *gin.Context) {
 		return
 	}
 
-	// 構造体の定義
-	// SQLはそのままで、response構造体のみ変えてあげればいいか
-	// ただそうなると、sqlでいいねをもらっている意味がなくなるかな？
-	// 今のSQLってツイートの情報の全てをもらっているし、SQLに合わせるとGo側は分けない。もしくは使わないという選択肢になるのか
 	touchActionRetweetRes := TouchActionRetweetResponse{
-		TweetID:      dbTweet.ID,
+		TweetID:      targetTweetId,
 		RetweetCount: dbTweet.RetweetCount,
 		IsRetweeted:  dbTweet.IsRetweeted,
 	}
 
 	c.JSON(http.StatusOK, touchActionRetweetRes)
+}
 
-	// レスポンス
-	// リツイートの状態と件数をもつ構造体を定義しないといけない
+func (tc *TweetController) CreateRetweet(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
 
+	targetTweetId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
+	}
+
+	hasRetweeted, err := tc.Queries.GetRetweetExists(c.Request.Context(), db.GetRetweetExistsParams{
+		UserID:  loggedUserId,
+		TweetID: targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "条件に合致するツイートがありません"})
+		return
+	}
+
+	// 値を受け取らないならsqlcを :oneから :execに変更してもいいんじゃない
+	if hasRetweeted == false {
+		_, err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
+			UserID:  loggedUserId,
+			TweetID: targetTweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "リツイートの削除に失敗しました"})
+			return
+		}
+	}
+
+	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+		UserID: loggedUserId,
+		ID:     targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	touchActionRetweetRes := TouchActionRetweetResponse{
+		TweetID:      targetTweetId,
+		RetweetCount: dbTweet.RetweetCount,
+		IsRetweeted:  dbTweet.IsRetweeted,
+	}
+
+	c.JSON(http.StatusOK, touchActionRetweetRes)
 }
