@@ -44,7 +44,7 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	userID, err := GetUserIDFromContext(c)
+	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
@@ -52,7 +52,7 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 	}
 
 	tweet, err := tc.Queries.CreateTweet(c.Request.Context(), db.CreateTweetParams{
-		UserID:  userID,
+		UserID:  loggedUserId,
 		Content: req.Content,
 	})
 	if err != nil {
@@ -61,12 +61,22 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	tweetRes := FormatTweetResponse(tweet.UserID, tweet.Content)
+	tweetRes := FormatTweetResponse(tweet)
 
 	c.JSON(http.StatusCreated, tweetRes)
 }
 
-func (tc *TweetController) GetTweets(c *gin.Context) {
+// ===================
+// いいねツイート一覧機能
+// ===================
+func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
 	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が違います"})
@@ -79,7 +89,6 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 		return
 	}
 
-	// 件数取得
 	totalCount, err := tc.Queries.GetTweetCount(c.Request.Context())
 	if err != nil {
 		log.Printf("件数取得に失敗しました")
@@ -87,37 +96,173 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 		return
 	}
 
-	tweets, err := tc.Queries.GetTweets(c.Request.Context(), db.GetTweetsParams{
+	dbTweets, err := tc.Queries.GetTweetsWithLikes(c.Request.Context(), db.GetTweetsWithLikesParams{
+		UserID: loggedUserId,
 		Limit:  limit,
 		Offset: offset,
 	})
 	if err != nil {
-		log.Printf("DBからの取得に失敗: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBからの取得に失敗しました"})
 		return
 	}
 
-	paginatedTweetsResponse := FormatPaginatedTweetsResponse(tweets, limit, offset, totalCount)
+	paginatedTweetsRes := FormatPaginatedWithLikeTweetsResponse(dbTweets, limit, offset, totalCount)
 
-	c.JSON(http.StatusOK, paginatedTweetsResponse)
+	c.JSON(http.StatusOK, paginatedTweetsRes)
 }
 
-func (tc *TweetController) GetTweet(c *gin.Context) {
-	id, err := utils.ParseParamInt32(c, "id")
+// ===================
+// いいね付きツイート詳細機能
+// ===================
+func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetTweetId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
 		c.JSON(http.StatusBadRequest, "不正なリクエストです")
 		return
 	}
 
-	tweet, err := tc.Queries.GetTweet(c.Request.Context(), id)
+	dbTweet, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+		UserID: loggedUserId,
+		ID:     targetTweetId,
+	})
 	if err != nil {
 		log.Printf("DBからの取得に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, "DBからの取得に失敗しました")
 		return
 	}
 
-	tweetRes := FormatTweetResponse(tweet.UserID, tweet.Content)
+	tweetRes := TweetResponse{
+		ID:        dbTweet.ID,
+		UserID:    dbTweet.UserID,
+		Content:   dbTweet.Content,
+		LikeCount: dbTweet.LikeCount,
+		IsLiked:   dbTweet.IsLiked,
+	}
 
 	c.JSON(http.StatusOK, tweetRes)
+}
+
+// いいね機能
+// バックエンドでツイートの有無の状態を確認する
+
+// 1. 今何のツイートとユーザーIDなのかを確認する
+// 2. 1.の情報を使いDBに該当するツイートがあるかを確認する
+// 3. 2.の結果を元に条件分岐でcreateLikeかdeleteLikeかを決める
+// 4. データを整形してレスポンスを返す
+func (tc *TweetController) DeleteLike(c *gin.Context) {
+
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	tweetId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
+	}
+
+	// Likeを持つ == DBにレコードがある
+	hasLiked, err := tc.Queries.GetLikeExists(c.Request.Context(), db.GetLikeExistsParams{
+		UserID:  loggedUserId,
+		TweetID: tweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがDBにありません"})
+		return
+	}
+
+	if hasLiked {
+		err := tc.Queries.DeleteLike(c.Request.Context(), db.DeleteLikeParams{
+			UserID:  loggedUserId,
+			TweetID: tweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました: %v", err)
+			c.JSON(http.StatusNotFound, gin.H{"error": "いいねの削除操作を完了できませんでした"})
+			return
+		}
+	}
+
+	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+		UserID: loggedUserId,
+		ID:     tweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "同期に失敗しました"})
+		return
+	}
+
+	touchActionResultRes := TouchActionResultResponse{
+		TweetID:   tweetId,
+		LikeCount: dbTweets.LikeCount,
+		IsLiked:   dbTweets.IsLiked,
+	}
+
+	c.JSON(http.StatusOK, touchActionResultRes)
+
+}
+
+func (tc *TweetController) CreateLike(c *gin.Context) {
+
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	tweetId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
+	}
+
+	// Likeを持つ == DBにレコードがある
+	hasLiked, err := tc.Queries.GetLikeExists(c.Request.Context(), db.GetLikeExistsParams{
+		UserID:  loggedUserId,
+		TweetID: tweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがDBにありません"})
+		return
+	}
+
+	if hasLiked == false {
+		_, err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
+			UserID:  loggedUserId,
+			TweetID: tweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました: %v", err)
+			c.JSON(http.StatusNotFound, gin.H{"error": "いいねの登録操作を完了できませんでした"})
+			return
+		}
+	}
+
+	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+		UserID: loggedUserId,
+		ID:     tweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "同期に失敗しました"})
+		return
+	}
+
+	touchActionResultRes := TouchActionResultResponse{
+		TweetID:   tweetId,
+		LikeCount: dbTweets.LikeCount,
+		IsLiked:   dbTweets.IsLiked,
+	}
+
+	c.JSON(http.StatusOK, touchActionResultRes)
+
 }

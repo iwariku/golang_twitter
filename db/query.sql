@@ -28,32 +28,82 @@ INSERT INTO tweets (
 )
 RETURNING *;
 
--- name: GetTweets :many
-SELECT * FROM tweets
-ORDER BY id DESC
-LIMIT $1 OFFSET $2;
-
 -- name: GetTweetCount :one
 SELECT COUNT(*) FROM tweets;
-
--- name: GetTweet :one
-SELECT id, user_id, content
-FROM tweets
-WHERE id = $1;
 
 -- name: GetUser :one
 SELECT * 
 FROM users
 WHERE id = $1;
 
--- name: GetTweetsByUserID :many
-SELECT *
-FROM tweets
-WHERE user_id = $1
-ORDER BY id DESC
-LIMIT $2 OFFSET $3;
+-- name: GetTweetsByUserIDWithLikes :many
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT (l.id) AS like_count,
+  -- 条件に合う行が存在した時1とする。この1でtrue/falseを判断する
+  MAX(CASE WHEN l.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_liked
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+WHERE t.user_id = @target_user_id::int
+GROUP BY t.id
+ORDER BY t.created_at DESC
+LIMIT @limit_val::int OFFSET @offset_val::int;
 
 -- name: GetTweetCountByUserID :one
 SELECT COUNT(*)
 FROM tweets
 WHERE user_id = $1;
+
+-- いいね機能
+-- name: CreateLike :one
+INSERT INTO likes (
+  user_id,
+  tweet_id
+) VALUES (
+  $1, $2
+)
+RETURNING *;
+
+-- name: DeleteLike :exec
+DELETE 
+FROM likes
+WHERE user_id = $1 AND tweet_id = $2;
+
+-- GetTweetWithLikesの単体SQL
+-- name: GetLikeExists :one
+SELECT EXISTS (
+  SELECT 1 
+  FROM likes 
+  WHERE user_id = $1 AND tweet_id = $2
+);
+
+-- name: GetTweetWithLikes :one
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT(l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+WHERE t.id = $2
+GROUP BY t.id;
+
+
+-- name: GetTweetsWithLikes :many
+SELECT 
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT(l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+GROUP BY t.id
+ORDER BY t.created_at DESC
+LIMIT $2 OFFSET $3;

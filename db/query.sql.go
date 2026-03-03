@@ -22,6 +22,34 @@ func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text)
 	return err
 }
 
+const createLike = `-- name: CreateLike :one
+INSERT INTO likes (
+  user_id,
+  tweet_id
+) VALUES (
+  $1, $2
+)
+RETURNING id, user_id, tweet_id, created_at
+`
+
+type CreateLikeParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+// いいね機能
+func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) (Like, error) {
+	row := q.db.QueryRow(ctx, createLike, arg.UserID, arg.TweetID)
+	var i Like
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TweetID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createTweet = `-- name: CreateTweet :one
 INSERT INTO tweets (
   user_id,
@@ -98,23 +126,41 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
-const getTweet = `-- name: GetTweet :one
-SELECT id, user_id, content
-FROM tweets
-WHERE id = $1
+const deleteLike = `-- name: DeleteLike :exec
+DELETE 
+FROM likes
+WHERE user_id = $1 AND tweet_id = $2
 `
 
-type GetTweetRow struct {
-	ID      int32  `json:"id"`
-	UserID  int32  `json:"user_id"`
-	Content string `json:"content"`
+type DeleteLikeParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
 }
 
-func (q *Queries) GetTweet(ctx context.Context, id int32) (GetTweetRow, error) {
-	row := q.db.QueryRow(ctx, getTweet, id)
-	var i GetTweetRow
-	err := row.Scan(&i.ID, &i.UserID, &i.Content)
-	return i, err
+func (q *Queries) DeleteLike(ctx context.Context, arg DeleteLikeParams) error {
+	_, err := q.db.Exec(ctx, deleteLike, arg.UserID, arg.TweetID)
+	return err
+}
+
+const getLikeExists = `-- name: GetLikeExists :one
+SELECT EXISTS (
+  SELECT 1 
+  FROM likes 
+  WHERE user_id = $1 AND tweet_id = $2
+)
+`
+
+type GetLikeExistsParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+// GetTweetWithLikesの単体SQL
+func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, getLikeExists, arg.UserID, arg.TweetID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const getTweetCount = `-- name: GetTweetCount :one
@@ -141,31 +187,102 @@ func (q *Queries) GetTweetCountByUserID(ctx context.Context, userID int32) (int6
 	return count, err
 }
 
-const getTweets = `-- name: GetTweets :many
-SELECT id, user_id, content, created_at FROM tweets
-ORDER BY id DESC
-LIMIT $1 OFFSET $2
+const getTweetWithLikes = `-- name: GetTweetWithLikes :one
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT(l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+WHERE t.id = $2
+GROUP BY t.id
 `
 
-type GetTweetsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+type GetTweetWithLikesParams struct {
+	UserID int32 `json:"user_id"`
+	ID     int32 `json:"id"`
 }
 
-func (q *Queries) GetTweets(ctx context.Context, arg GetTweetsParams) ([]Tweet, error) {
-	rows, err := q.db.Query(ctx, getTweets, arg.Limit, arg.Offset)
+type GetTweetWithLikesRow struct {
+	ID        int32            `json:"id"`
+	UserID    int32            `json:"user_id"`
+	Content   string           `json:"content"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	LikeCount int64            `json:"like_count"`
+	IsLiked   bool             `json:"is_liked"`
+}
+
+func (q *Queries) GetTweetWithLikes(ctx context.Context, arg GetTweetWithLikesParams) (GetTweetWithLikesRow, error) {
+	row := q.db.QueryRow(ctx, getTweetWithLikes, arg.UserID, arg.ID)
+	var i GetTweetWithLikesRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Content,
+		&i.CreatedAt,
+		&i.LikeCount,
+		&i.IsLiked,
+	)
+	return i, err
+}
+
+const getTweetsByUserIDWithLikes = `-- name: GetTweetsByUserIDWithLikes :many
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT (l.id) AS like_count,
+  -- 条件に合う行が存在した時1とする。この1でtrue/falseを判断する
+  MAX(CASE WHEN l.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_liked
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+WHERE t.user_id = $2::int
+GROUP BY t.id
+ORDER BY t.created_at DESC
+LIMIT $4::int OFFSET $3::int
+`
+
+type GetTweetsByUserIDWithLikesParams struct {
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
+}
+
+type GetTweetsByUserIDWithLikesRow struct {
+	ID        int32            `json:"id"`
+	UserID    int32            `json:"user_id"`
+	Content   string           `json:"content"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	LikeCount int64            `json:"like_count"`
+	IsLiked   bool             `json:"is_liked"`
+}
+
+func (q *Queries) GetTweetsByUserIDWithLikes(ctx context.Context, arg GetTweetsByUserIDWithLikesParams) ([]GetTweetsByUserIDWithLikesRow, error) {
+	rows, err := q.db.Query(ctx, getTweetsByUserIDWithLikes,
+		arg.LoggedUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Tweet
+	var items []GetTweetsByUserIDWithLikesRow
 	for rows.Next() {
-		var i Tweet
+		var i GetTweetsByUserIDWithLikesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
 			&i.Content,
 			&i.CreatedAt,
+			&i.LikeCount,
+			&i.IsLiked,
 		); err != nil {
 			return nil, err
 		}
@@ -177,34 +294,52 @@ func (q *Queries) GetTweets(ctx context.Context, arg GetTweetsParams) ([]Tweet, 
 	return items, nil
 }
 
-const getTweetsByUserID = `-- name: GetTweetsByUserID :many
-SELECT id, user_id, content, created_at
-FROM tweets
-WHERE user_id = $1
-ORDER BY id DESC
+const getTweetsWithLikes = `-- name: GetTweetsWithLikes :many
+SELECT 
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT(l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+GROUP BY t.id
+ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
-type GetTweetsByUserIDParams struct {
+type GetTweetsWithLikesParams struct {
 	UserID int32 `json:"user_id"`
 	Limit  int32 `json:"limit"`
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetTweetsByUserID(ctx context.Context, arg GetTweetsByUserIDParams) ([]Tweet, error) {
-	rows, err := q.db.Query(ctx, getTweetsByUserID, arg.UserID, arg.Limit, arg.Offset)
+type GetTweetsWithLikesRow struct {
+	ID        int32            `json:"id"`
+	UserID    int32            `json:"user_id"`
+	Content   string           `json:"content"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	LikeCount int64            `json:"like_count"`
+	IsLiked   bool             `json:"is_liked"`
+}
+
+func (q *Queries) GetTweetsWithLikes(ctx context.Context, arg GetTweetsWithLikesParams) ([]GetTweetsWithLikesRow, error) {
+	rows, err := q.db.Query(ctx, getTweetsWithLikes, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Tweet
+	var items []GetTweetsWithLikesRow
 	for rows.Next() {
-		var i Tweet
+		var i GetTweetsWithLikesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
 			&i.Content,
 			&i.CreatedAt,
+			&i.LikeCount,
+			&i.IsLiked,
 		); err != nil {
 			return nil, err
 		}

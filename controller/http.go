@@ -1,6 +1,8 @@
 package controller
 
-import "time"
+import (
+	"time"
+)
 
 // リクエストレスポンスの構造体を全てここにまとめる
 
@@ -23,13 +25,24 @@ type TweetRequest struct {
 }
 
 type TweetResponse struct {
+	ID      int32  `json:"id"`
 	UserID  int32  `json:"user_id"`
 	Content string `json:"content"`
+	// ここにいいねとカウント数を足す
+	LikeCount int64 `json:"like_count"`
+	IsLiked   bool  `json:"is_liked"`
 }
 
+// この構造体はそのままでいいんじゃない？ツイート一覧を返却するのであれば
 type PaginatedTweetsResponse struct {
 	Tweets []TweetResponse `json:"tweets"`
 	Limit  int             `json:"limit"`
 	Offset int             `json:"offset"`
 	Count  int             `json:"count"`
+}
+
+type TouchActionResultResponse struct {
+	TweetID   int32 `json:"tweet_id"`
+	LikeCount int64 `json:"like_count"`
+	IsLiked   bool  `json:"is_liked"`
 }

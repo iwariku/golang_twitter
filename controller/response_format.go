@@ -2,20 +2,46 @@ package controller
 
 import "golang_twitter/db"
 
+// ==================
+// ツイート(いいね無し)のレスポンスを返却
+// ==================
+
 // formatTweetResponseはDBモデルからAPIレスポンス用の構造体に変換する
-func FormatTweetResponse(userID int32, content string) TweetResponse {
+// 拡張性を意識し、引数はDBモデルそのものを渡す。
+func FormatTweetResponse(t db.Tweet) TweetResponse {
 	return TweetResponse{
-		UserID:  userID,
-		Content: content,
+		ID:      t.ID,
+		UserID:  t.UserID,
+		Content: t.Content,
+	}
+}
+
+// ==================
+// ツイート(いいね数と状態を持つ)レスポンスを返却
+// ==================
+
+// いいね付きツイートをAPIレスポンス用の構造体に変換する
+// リツイートとブックマーク機能もここに足す。その時に命名変更
+// ツイートだけをレスポンスするFormatTweetResponseを使わずこちらをメインにする
+// -> sqlcで自動生成される型が違う問題が出てくるためこのformatはページネーション付きでしか使えない
+// -> マッピングはcontroller内の方がいいと思う
+func FormatTweetWithLikeResponse(t db.GetTweetsWithLikesRow) TweetResponse {
+	return TweetResponse{
+		ID:        t.ID,
+		UserID:    t.UserID,
+		Content:   t.Content,
+		LikeCount: t.LikeCount,
+		IsLiked:   t.IsLiked,
 	}
 }
 
 // ページネーション付きで返す
-// ユーザー一覧(フォローフォロワーのタスク)でもページネーションは使うため先に分けておく
-func FormatPaginatedTweetsResponse(tweets []db.Tweet, limit, offset int32, totalCount int64) PaginatedTweetsResponse {
-	var tweetsRes []TweetResponse
-	for _, t := range tweets {
-		tweetsRes = append(tweetsRes, FormatTweetResponse(t.UserID, t.Content))
+// いいね付きなので、db.GetTweetsWithLikesRow型にする
+// もしリツイートとブックマークが追加されたとしてもTweetResponseの構造体を変えるだけでいい
+func FormatPaginatedWithLikeTweetsResponse(dbTweets []db.GetTweetsWithLikesRow, limit, offset int32, totalCount int64) PaginatedTweetsResponse {
+	tweetsRes := make([]TweetResponse, len(dbTweets))
+	for i, t := range dbTweets {
+		tweetsRes[i] = FormatTweetWithLikeResponse(t) // 新設した関数を利用
 	}
 
 	return PaginatedTweetsResponse{

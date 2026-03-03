@@ -4,8 +4,32 @@ let currentOffset = parseInt(urlParams.get('offset')) || 0;
 let totalCount = 0;
 let currentApiUrl = '';
 
+// いいね機能
+const setupLikeButton = (btn, tweetId, countLabel) => {
+  btn.addEventListener('click', async () => {
+    const isLiked = btn.dataset.isLiked === 'true';
+    const method = isLiked ? 'DELETE' : 'POST';
+
+    const response = await fetch(`/api/tweets/${tweetId}/like`, {
+      method: method,
+    });
+    if (!response.ok) {
+      console.error('サーバーエラーが発生しました', response.status);
+      return;
+    }
+
+    const data = await response.json();
+
+    btn.dataset.isLiked = data.is_liked;
+    countLabel.textContent = data.like_count;
+    btn.textContent = data.is_liked ? '❤️' : '♡';
+  });
+};
+
 // ツイートカード作成
 const createTweetCard = (tweet) => {
+  // デバッグ用
+  console.log(tweet);
   const tweetCard = document.createElement('div');
   tweetCard.className =
     'p-4 border-b border-gray-100 hover:bg-gray-50/50 transition cursor-pointer';
@@ -18,8 +42,15 @@ const createTweetCard = (tweet) => {
           <span class="font-bold text-[15px] hover:underline">User ID: ${tweet.user_id}</span>
         </div>
         <p class="text-[15px] leading-5 mt-1 whitespace-pre-wrap">${tweet.content}</p>
+        <button class="js-like-btn" data-is-liked="${tweet.is_liked}">${tweet.is_liked ? '❤️' : '♡'}</button> 
+        <span class="js-like-count">${tweet.like_count}</span>
       </div>
     </div>`;
+
+  const btn = tweetCard.querySelector('.js-like-btn');
+  const label = tweetCard.querySelector('.js-like-count');
+
+  setupLikeButton(btn, tweet.id, label);
 
   return tweetCard;
 };
