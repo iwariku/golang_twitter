@@ -411,27 +411,32 @@ func (tc *TweetController) GetRetweetedTweetsByUserID(c *gin.Context) {
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
 	}
 
 	targetUserId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が違います"})
+		return
 	}
 
 	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+		return
 	}
 
 	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+		return
 	}
 
 	totalCount, err := tc.Queries.GetRetweetCountByUserID(c.Request.Context(), targetUserId)
 	if err != nil {
 		log.Printf("件数の取得に失敗しました")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
 	}
 
 	dbTweet, err := tc.Queries.GetRetweetedTweetsByUserID(c.Request.Context(), db.GetRetweetedTweetsByUserIDParams{
@@ -440,6 +445,11 @@ func (tc *TweetController) GetRetweetedTweetsByUserID(c *gin.Context) {
 		LimitVal:     limit,
 		OffsetVal:    offset,
 	})
+	if err != nil {
+		log.Printf("データの取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
 
 	tweetRes := make([]TweetResponse, len(dbTweet))
 	for i, t := range dbTweet {
