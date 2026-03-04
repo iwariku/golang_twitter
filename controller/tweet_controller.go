@@ -67,9 +67,9 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 }
 
 // ===================
-// いいねツイート一覧機能
+// いいね、リツイート付きツイート一覧機能
 // ===================
-func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
+func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
@@ -96,7 +96,7 @@ func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
 		return
 	}
 
-	dbTweets, err := tc.Queries.GetTweetsWithLikes(c.Request.Context(), db.GetTweetsWithLikesParams{
+	dbTweets, err := tc.Queries.GetTweetsWithLikesWithRetweets(c.Request.Context(), db.GetTweetsWithLikesWithRetweetsParams{
 		UserID: loggedUserId,
 		Limit:  limit,
 		Offset: offset,
@@ -106,15 +106,33 @@ func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
 		return
 	}
 
-	paginatedTweetsRes := FormatPaginatedWithLikeTweetsResponse(dbTweets, limit, offset, totalCount)
+	tweetRes := make([]TweetResponse, len(dbTweets))
+	for i, t := range dbTweets {
+		tweetRes[i] = TweetResponse{
+			ID:           t.ID,
+			UserID:       t.UserID,
+			Content:      t.Content,
+			LikeCount:    t.LikeCount,
+			IsLiked:      t.IsLiked,
+			RetweetCount: t.RetweetCount,
+			IsRetweeted:  t.IsRetweeted,
+		}
+	}
+
+	paginatedTweetsRes := PaginatedTweetsResponse{
+		Tweets: tweetRes,
+		Limit:  int(limit),
+		Offset: int(offset),
+		Count:  int(totalCount),
+	}
 
 	c.JSON(http.StatusOK, paginatedTweetsRes)
 }
 
 // ===================
-// いいね付きツイート詳細機能
+// いいね、リツイート付きツイート詳細機能
 // ===================
-func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
+func (tc *TweetController) GetTweetWithLikesWithRetweets(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
@@ -129,7 +147,7 @@ func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
 		return
 	}
 
-	dbTweet, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
 		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
@@ -140,11 +158,13 @@ func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
 	}
 
 	tweetRes := TweetResponse{
-		ID:        dbTweet.ID,
-		UserID:    dbTweet.UserID,
-		Content:   dbTweet.Content,
-		LikeCount: dbTweet.LikeCount,
-		IsLiked:   dbTweet.IsLiked,
+		ID:           dbTweet.ID,
+		UserID:       dbTweet.UserID,
+		Content:      dbTweet.Content,
+		LikeCount:    dbTweet.LikeCount,
+		IsLiked:      dbTweet.IsLiked,
+		RetweetCount: dbTweet.RetweetCount,
+		IsRetweeted:  dbTweet.IsRetweeted,
 	}
 
 	c.JSON(http.StatusOK, tweetRes)

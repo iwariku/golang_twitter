@@ -44,7 +44,6 @@ type PaginatedTweetsResponse struct {
 	Count  int             `json:"count"`
 }
 
-// 構造体の共通化
 type TouchActionResultResponse struct {
 	TweetID   int32 `json:"tweet_id"`
 	LikeCount int64 `json:"like_count"`
