@@ -67,9 +67,9 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 }
 
 // ===================
-// いいねツイート一覧機能
+// いいね、リツイート付きツイート一覧機能
 // ===================
-func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
+func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
@@ -96,7 +96,7 @@ func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
 		return
 	}
 
-	dbTweets, err := tc.Queries.GetTweetsWithLikes(c.Request.Context(), db.GetTweetsWithLikesParams{
+	dbTweets, err := tc.Queries.GetTweetsWithLikesWithRetweets(c.Request.Context(), db.GetTweetsWithLikesWithRetweetsParams{
 		UserID: loggedUserId,
 		Limit:  limit,
 		Offset: offset,
@@ -106,15 +106,33 @@ func (tc *TweetController) GetTweetsWithLikes(c *gin.Context) {
 		return
 	}
 
-	paginatedTweetsRes := FormatPaginatedWithLikeTweetsResponse(dbTweets, limit, offset, totalCount)
+	tweetRes := make([]TweetResponse, len(dbTweets))
+	for i, t := range dbTweets {
+		tweetRes[i] = TweetResponse{
+			ID:           t.ID,
+			UserID:       t.UserID,
+			Content:      t.Content,
+			LikeCount:    t.LikeCount,
+			IsLiked:      t.IsLiked,
+			RetweetCount: t.RetweetCount,
+			IsRetweeted:  t.IsRetweeted,
+		}
+	}
+
+	paginatedTweetsRes := PaginatedTweetsResponse{
+		Tweets: tweetRes,
+		Limit:  int(limit),
+		Offset: int(offset),
+		Count:  int(totalCount),
+	}
 
 	c.JSON(http.StatusOK, paginatedTweetsRes)
 }
 
 // ===================
-// いいね付きツイート詳細機能
+// いいね、リツイート付きツイート詳細機能
 // ===================
-func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
+func (tc *TweetController) GetTweetWithLikesWithRetweets(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
@@ -129,7 +147,7 @@ func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
 		return
 	}
 
-	dbTweet, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
 		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
@@ -140,11 +158,13 @@ func (tc *TweetController) GetTweetWithLikes(c *gin.Context) {
 	}
 
 	tweetRes := TweetResponse{
-		ID:        dbTweet.ID,
-		UserID:    dbTweet.UserID,
-		Content:   dbTweet.Content,
-		LikeCount: dbTweet.LikeCount,
-		IsLiked:   dbTweet.IsLiked,
+		ID:           dbTweet.ID,
+		UserID:       dbTweet.UserID,
+		Content:      dbTweet.Content,
+		LikeCount:    dbTweet.LikeCount,
+		IsLiked:      dbTweet.IsLiked,
+		RetweetCount: dbTweet.RetweetCount,
+		IsRetweeted:  dbTweet.IsRetweeted,
 	}
 
 	c.JSON(http.StatusOK, tweetRes)
@@ -265,4 +285,191 @@ func (tc *TweetController) CreateLike(c *gin.Context) {
 
 	c.JSON(http.StatusOK, touchActionResultRes)
 
+}
+
+// ツイート系にRetweetを入れる
+
+// リツイートの登録、削除のロジックを作成する
+// ログインしているユーザーの確認
+// dbにレコードがあるか確認
+// 条件分岐であるならdelete、あるならcreate
+// いいねしたレスポンスを返す
+// -> レスポンスの定義は一旦拡張せずに専用のレスポンス構造体を作成しようかな。いいねとリツイートはカウントがいるけど、ブックマークは要ら
+func (tc *TweetController) DeleteRetweet(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetTweetId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
+	}
+
+	hasRetweeted, err := tc.Queries.GetRetweetExists(c.Request.Context(), db.GetRetweetExistsParams{
+		UserID:  loggedUserId,
+		TweetID: targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "条件に合致するツイートがありません"})
+		return
+	}
+
+	if hasRetweeted {
+		err := tc.Queries.DeleteRetweet(c.Request.Context(), db.DeleteRetweetParams{
+			UserID:  loggedUserId,
+			TweetID: targetTweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "リツイートの削除に失敗しました"})
+			return
+		}
+	}
+
+	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+		UserID: loggedUserId,
+		ID:     targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	touchActionRetweetRes := TouchActionRetweetResponse{
+		TweetID:      targetTweetId,
+		RetweetCount: dbTweet.RetweetCount,
+		IsRetweeted:  dbTweet.IsRetweeted,
+	}
+
+	c.JSON(http.StatusOK, touchActionRetweetRes)
+}
+
+func (tc *TweetController) CreateRetweet(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetTweetId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
+	}
+
+	hasRetweeted, err := tc.Queries.GetRetweetExists(c.Request.Context(), db.GetRetweetExistsParams{
+		UserID:  loggedUserId,
+		TweetID: targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "条件に合致するツイートがありません"})
+		return
+	}
+
+	// 値を受け取らないならsqlcを :oneから :execに変更してもいいんじゃない
+	if hasRetweeted == false {
+		_, err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
+			UserID:  loggedUserId,
+			TweetID: targetTweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "リツイートの登録に失敗しました"})
+			return
+		}
+	}
+
+	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+		UserID: loggedUserId,
+		ID:     targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	touchActionRetweetRes := TouchActionRetweetResponse{
+		TweetID:      targetTweetId,
+		RetweetCount: dbTweet.RetweetCount,
+		IsRetweeted:  dbTweet.IsRetweeted,
+	}
+
+	c.JSON(http.StatusOK, touchActionRetweetRes)
+}
+
+// 選択したユーザーがどのツイートをリツイートしているのかを見る
+// 必要なデータ。選択されたユーザーID、ログインしているユーザーID、LIMIT、OFFSET
+// 使う関数: GetRetweetedTweetsByUserID
+// api/retweetedtweet/:id?limit=1&offset=10
+
+// 参考になるもの: ツイート一覧のページネーションのロジック、ユーザー詳細のツイート一覧、JSのfetch
+func (tc *TweetController) GetRetweetedTweetsByUserID(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が違います"})
+		return
+	}
+
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+		return
+	}
+
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+		return
+	}
+
+	totalCount, err := tc.Queries.GetRetweetCountByUserID(c.Request.Context(), targetUserId)
+	if err != nil {
+		log.Printf("件数の取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
+	}
+
+	dbTweet, err := tc.Queries.GetRetweetedTweetsByUserID(c.Request.Context(), db.GetRetweetedTweetsByUserIDParams{
+		LoggedUserID: loggedUserId,
+		TargetUserID: targetUserId,
+		LimitVal:     limit,
+		OffsetVal:    offset,
+	})
+	if err != nil {
+		log.Printf("データの取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	tweetRes := make([]TweetResponse, len(dbTweet))
+	for i, t := range dbTweet {
+		tweetRes[i] = TweetResponse{
+			ID:           t.ID,
+			UserID:       t.UserID,
+			Content:      t.Content,
+			LikeCount:    t.LikeCount,
+			IsLiked:      t.IsLiked,
+			RetweetCount: t.RetweetCount,
+			IsRetweeted:  t.IsRetweeted,
+		}
+	}
+
+	paginatedTweetsRes := PaginatedTweetsResponse{
+		Tweets: tweetRes,
+		Limit:  int(limit),
+		Offset: int(offset),
+		Count:  int(totalCount),
+	}
+
+	c.JSON(http.StatusOK, paginatedTweetsRes)
 }

@@ -181,7 +181,10 @@ func (uc *UserController) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, UserRes)
 }
 
-func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
+// ===================
+// いいね、リツイート付きユーザー詳細機能
+// ===================
+func (uc *UserController) GetTweetsByUserIDWithLikesWithRetweets(c *gin.Context) {
 	targetUserId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
@@ -215,7 +218,7 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 		return
 	}
 
-	dbTweets, err := uc.Queries.GetTweetsByUserIDWithLikes(c.Request.Context(), db.GetTweetsByUserIDWithLikesParams{
+	dbTweets, err := uc.Queries.GetTweetsByUserIDWithLikesWithRetweets(c.Request.Context(), db.GetTweetsByUserIDWithLikesWithRetweetsParams{
 		TargetUserID: targetUserId,
 		LoggedUserID: loggedUserId,
 		LimitVal:     limit,
@@ -230,11 +233,13 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 	tweetsRes := make([]TweetResponse, len(dbTweets))
 	for i, t := range dbTweets {
 		tweetsRes[i] = TweetResponse{
-			ID:        t.ID,
-			UserID:    t.UserID,
-			Content:   t.Content,
-			LikeCount: t.LikeCount,
-			IsLiked:   t.IsLiked,
+			ID:           t.ID,
+			UserID:       t.UserID,
+			Content:      t.Content,
+			LikeCount:    t.LikeCount,
+			IsLiked:      t.IsLiked,
+			RetweetCount: t.RetweetCount,
+			IsRetweeted:  t.IsRetweeted,
 		}
 	}
 

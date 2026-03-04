@@ -50,6 +50,33 @@ func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) (Like, e
 	return i, err
 }
 
+const createRetweet = `-- name: CreateRetweet :one
+INSERT INTO retweets (
+  user_id,
+  tweet_id
+) VALUES (
+  $1, $2
+)
+RETURNING id, user_id, tweet_id, created_at
+`
+
+type CreateRetweetParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+func (q *Queries) CreateRetweet(ctx context.Context, arg CreateRetweetParams) (Retweet, error) {
+	row := q.db.QueryRow(ctx, createRetweet, arg.UserID, arg.TweetID)
+	var i Retweet
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TweetID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createTweet = `-- name: CreateTweet :one
 INSERT INTO tweets (
   user_id,
@@ -142,6 +169,22 @@ func (q *Queries) DeleteLike(ctx context.Context, arg DeleteLikeParams) error {
 	return err
 }
 
+const deleteRetweet = `-- name: DeleteRetweet :exec
+DELETE
+FROM retweets
+WHERE user_id = $1 AND tweet_id = $2
+`
+
+type DeleteRetweetParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+func (q *Queries) DeleteRetweet(ctx context.Context, arg DeleteRetweetParams) error {
+	_, err := q.db.Exec(ctx, deleteRetweet, arg.UserID, arg.TweetID)
+	return err
+}
+
 const getLikeExists = `-- name: GetLikeExists :one
 SELECT EXISTS (
   SELECT 1 
@@ -161,6 +204,113 @@ func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (b
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const getRetweetCountByUserID = `-- name: GetRetweetCountByUserID :one
+SELECT COUNT(*)
+FROM retweets
+WHERE user_id = $1
+`
+
+func (q *Queries) GetRetweetCountByUserID(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getRetweetCountByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getRetweetExists = `-- name: GetRetweetExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM retweets
+  WHERE user_id = $1 AND tweet_id = $2
+)
+`
+
+type GetRetweetExistsParams struct {
+	UserID  int32 `json:"user_id"`
+	TweetID int32 `json:"tweet_id"`
+}
+
+func (q *Queries) GetRetweetExists(ctx context.Context, arg GetRetweetExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, getRetweetExists, arg.UserID, arg.TweetID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getRetweetedTweetsByUserID = `-- name: GetRetweetedTweetsByUserID :many
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  user_retweets.created_at,
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT all_retweets.id) AS retweet_count,
+  MAX(CASE WHEN all_retweets.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_retweeted
+FROM retweets user_retweets
+JOIN tweets t ON user_retweets.tweet_id = t.id
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN  retweets all_retweets ON all_retweets.tweet_id = t.id
+WHERE user_retweets.user_id = $2
+GROUP BY t.id, user_retweets.created_at
+ORDER BY user_retweets.created_at DESC
+LIMIT $4::int OFFSET $3::int
+`
+
+type GetRetweetedTweetsByUserIDParams struct {
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
+}
+
+type GetRetweetedTweetsByUserIDRow struct {
+	ID           int32            `json:"id"`
+	UserID       int32            `json:"user_id"`
+	Content      string           `json:"content"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	LikeCount    int64            `json:"like_count"`
+	IsLiked      bool             `json:"is_liked"`
+	RetweetCount int64            `json:"retweet_count"`
+	IsRetweeted  bool             `json:"is_retweeted"`
+}
+
+// 選択したユーザーがリツイートしているツイート一覧
+// user_idが$1,$2だとGo側でuserID,userID_2となるため@を使って明示的に宣言し直す
+func (q *Queries) GetRetweetedTweetsByUserID(ctx context.Context, arg GetRetweetedTweetsByUserIDParams) ([]GetRetweetedTweetsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, getRetweetedTweetsByUserID,
+		arg.LoggedUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRetweetedTweetsByUserIDRow
+	for rows.Next() {
+		var i GetRetweetedTweetsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Content,
+			&i.CreatedAt,
+			&i.LikeCount,
+			&i.IsLiked,
+			&i.RetweetCount,
+			&i.IsRetweeted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTweetCount = `-- name: GetTweetCount :one
@@ -225,6 +375,57 @@ func (q *Queries) GetTweetWithLikes(ctx context.Context, arg GetTweetWithLikesPa
 		&i.CreatedAt,
 		&i.LikeCount,
 		&i.IsLiked,
+	)
+	return i, err
+}
+
+const getTweetWithLikesWithRetweets = `-- name: GetTweetWithLikesWithRetweets :one
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT r.id) AS retweet_count,
+  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN retweets r ON r.tweet_id = t.id
+WHERE t.id = $2
+GROUP BY t.id
+`
+
+type GetTweetWithLikesWithRetweetsParams struct {
+	UserID int32 `json:"user_id"`
+	ID     int32 `json:"id"`
+}
+
+type GetTweetWithLikesWithRetweetsRow struct {
+	ID           int32            `json:"id"`
+	UserID       int32            `json:"user_id"`
+	Content      string           `json:"content"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	LikeCount    int64            `json:"like_count"`
+	IsLiked      bool             `json:"is_liked"`
+	RetweetCount int64            `json:"retweet_count"`
+	IsRetweeted  bool             `json:"is_retweeted"`
+}
+
+// リツイート機能
+// ツイート詳細、いいね、リツイート付き(リツイートができたら巻き替え)
+func (q *Queries) GetTweetWithLikesWithRetweets(ctx context.Context, arg GetTweetWithLikesWithRetweetsParams) (GetTweetWithLikesWithRetweetsRow, error) {
+	row := q.db.QueryRow(ctx, getTweetWithLikesWithRetweets, arg.UserID, arg.ID)
+	var i GetTweetWithLikesWithRetweetsRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Content,
+		&i.CreatedAt,
+		&i.LikeCount,
+		&i.IsLiked,
+		&i.RetweetCount,
+		&i.IsRetweeted,
 	)
 	return i, err
 }
@@ -294,6 +495,78 @@ func (q *Queries) GetTweetsByUserIDWithLikes(ctx context.Context, arg GetTweetsB
 	return items, nil
 }
 
+const getTweetsByUserIDWithLikesWithRetweets = `-- name: GetTweetsByUserIDWithLikesWithRetweets :many
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT r.id) AS retweet_count,
+  MAX(CASE WHEN r.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_retweeted
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN  retweets r ON r.tweet_id = t.id
+WHERE t.user_id = $2::int
+GROUP BY t.id
+ORDER BY t.created_at DESC
+LIMIT $4::int OFFSET $3::int
+`
+
+type GetTweetsByUserIDWithLikesWithRetweetsParams struct {
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
+}
+
+type GetTweetsByUserIDWithLikesWithRetweetsRow struct {
+	ID           int32            `json:"id"`
+	UserID       int32            `json:"user_id"`
+	Content      string           `json:"content"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	LikeCount    int64            `json:"like_count"`
+	IsLiked      bool             `json:"is_liked"`
+	RetweetCount int64            `json:"retweet_count"`
+	IsRetweeted  bool             `json:"is_retweeted"`
+}
+
+// ユーザー詳細でのツイート一覧、いいね、リツイート付き(リツイートができたら巻き替え)
+func (q *Queries) GetTweetsByUserIDWithLikesWithRetweets(ctx context.Context, arg GetTweetsByUserIDWithLikesWithRetweetsParams) ([]GetTweetsByUserIDWithLikesWithRetweetsRow, error) {
+	rows, err := q.db.Query(ctx, getTweetsByUserIDWithLikesWithRetweets,
+		arg.LoggedUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTweetsByUserIDWithLikesWithRetweetsRow
+	for rows.Next() {
+		var i GetTweetsByUserIDWithLikesWithRetweetsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Content,
+			&i.CreatedAt,
+			&i.LikeCount,
+			&i.IsLiked,
+			&i.RetweetCount,
+			&i.IsRetweeted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTweetsWithLikes = `-- name: GetTweetsWithLikes :many
 SELECT 
   t.id,
@@ -340,6 +613,71 @@ func (q *Queries) GetTweetsWithLikes(ctx context.Context, arg GetTweetsWithLikes
 			&i.CreatedAt,
 			&i.LikeCount,
 			&i.IsLiked,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTweetsWithLikesWithRetweets = `-- name: GetTweetsWithLikesWithRetweets :many
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT r.id) AS retweet_count,
+  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN retweets r ON r.tweet_id = t.id
+GROUP BY t.id
+ORDER BY t.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetTweetsWithLikesWithRetweetsParams struct {
+	UserID int32 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type GetTweetsWithLikesWithRetweetsRow struct {
+	ID           int32            `json:"id"`
+	UserID       int32            `json:"user_id"`
+	Content      string           `json:"content"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	LikeCount    int64            `json:"like_count"`
+	IsLiked      bool             `json:"is_liked"`
+	RetweetCount int64            `json:"retweet_count"`
+	IsRetweeted  bool             `json:"is_retweeted"`
+}
+
+// ツイート一覧、いいね、リツイート付き(リツイートができたら巻き替え)
+func (q *Queries) GetTweetsWithLikesWithRetweets(ctx context.Context, arg GetTweetsWithLikesWithRetweetsParams) ([]GetTweetsWithLikesWithRetweetsRow, error) {
+	rows, err := q.db.Query(ctx, getTweetsWithLikesWithRetweets, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTweetsWithLikesWithRetweetsRow
+	for rows.Next() {
+		var i GetTweetsWithLikesWithRetweetsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Content,
+			&i.CreatedAt,
+			&i.LikeCount,
+			&i.IsLiked,
+			&i.RetweetCount,
+			&i.IsRetweeted,
 		); err != nil {
 			return nil, err
 		}

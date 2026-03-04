@@ -26,6 +26,28 @@ const setupLikeButton = (btn, tweetId, countLabel) => {
   });
 };
 
+// リツイート機能
+const setupRetweetButton = (btn, tweetId, countLabel) => {
+  btn.addEventListener('click', async () => {
+    const isRetweeted = btn.dataset.isRetweeted === 'true';
+    const method = isRetweeted ? 'DELETE' : 'POST';
+
+    const response = await fetch(`/api/tweets/${tweetId}/retweet`, {
+      method: method,
+    });
+    if (!response.ok) {
+      console.error('サーバーエラーが発生しました', response.status);
+      return;
+    }
+
+    const data = await response.json();
+
+    btn.dataset.isRetweeted = data.is_retweeted;
+    countLabel.textContent = data.retweet_count;
+    btn.textContent = data.is_retweeted ? '♻️' : '♻︎';
+  });
+};
+
 // ツイートカード作成
 const createTweetCard = (tweet) => {
   // デバッグ用
@@ -44,13 +66,18 @@ const createTweetCard = (tweet) => {
         <p class="text-[15px] leading-5 mt-1 whitespace-pre-wrap">${tweet.content}</p>
         <button class="js-like-btn" data-is-liked="${tweet.is_liked}">${tweet.is_liked ? '❤️' : '♡'}</button> 
         <span class="js-like-count">${tweet.like_count}</span>
+        <button class="js-retweet-btn" data-is-retweeted="${tweet.is_retweeted}">${tweet.is_retweeted ? '♻️' : '♻︎'}</button>
+        <span class="js-retweet-count">${tweet.retweet_count}</span>
       </div>
     </div>`;
 
-  const btn = tweetCard.querySelector('.js-like-btn');
-  const label = tweetCard.querySelector('.js-like-count');
+  const likeBtn = tweetCard.querySelector('.js-like-btn');
+  const likeLabel = tweetCard.querySelector('.js-like-count');
+  const retweetBtn = tweetCard.querySelector('.js-retweet-btn');
+  const retweetLabel = tweetCard.querySelector('.js-retweet-count');
 
-  setupLikeButton(btn, tweet.id, label);
+  setupLikeButton(likeBtn, tweet.id, likeLabel);
+  setupRetweetButton(retweetBtn, tweet.id, retweetLabel);
 
   return tweetCard;
 };
@@ -177,6 +204,10 @@ const dispatchPathTask = async () => {
     // 先にDBにアクセスしてデータの取得に失敗したため
     await getUser();
     currentApiUrl = `/api/users/${idFromPath}/tweets`;
+    loadTweets();
+    setupPagination();
+  } else if (path.includes('user-retweet')) {
+    currentApiUrl = `/api/users/${idFromPath}/retweets`;
     loadTweets();
     setupPagination();
   } else if (path.includes('post')) {

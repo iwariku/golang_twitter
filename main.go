@@ -57,21 +57,29 @@ func main() {
 			c.HTML(http.StatusOK, "home.html", nil)
 		})
 		// authGroup.GET("/api/tweets", tc.GetTweets)
-		authGroup.GET("/api/tweets", tc.GetTweetsWithLikes)
+		authGroup.GET("/api/tweets", tc.GetTweetsWithLikesWithRetweets)
 
 		authGroup.GET("/tweet-detail/:id", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "post-detail.html", nil)
 		})
-		authGroup.GET("/api/tweets/:id", tc.GetTweetWithLikes)
+		authGroup.GET("/api/tweets/:id", tc.GetTweetWithLikesWithRetweets)
 
 		authGroup.GET("/user-detail/:id", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "user-detail.html", nil)
 		})
 		authGroup.GET("/api/users/:id", uc.GetUser)
-		authGroup.GET("/api/users/:id/tweets", uc.GetTweetsByUserID)
+		authGroup.GET("/api/users/:id/tweets", uc.GetTweetsByUserIDWithLikesWithRetweets)
+		authGroup.GET("/user-retweet/:id", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "user-retweet.html", nil)
+		})
+		authGroup.GET("/api/users/:id/retweets", tc.GetRetweetedTweetsByUserID)
 
 		authGroup.POST("/api/tweets/:id/like", tc.CreateLike)
 		authGroup.DELETE("/api/tweets/:id/like", tc.DeleteLike)
+
+		authGroup.POST("/api/tweets/:id/retweet", tc.CreateRetweet)
+		authGroup.DELETE("/api/tweets/:id/retweet", tc.DeleteRetweet)
+
 	}
 
 	r.Run()
