@@ -246,9 +246,9 @@ SELECT
   t.content,
   user_retweets.created_at,
   COUNT(DISTINCT l.id) AS like_count,
-  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
+  MAX(CASE WHEN l.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_liked,
   COUNT(DISTINCT all_retweets.id) AS retweet_count,
-  MAX(CASE WHEN all_retweets.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
+  MAX(CASE WHEN all_retweets.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_retweeted
 FROM retweets user_retweets
 JOIN tweets t ON user_retweets.tweet_id = t.id
 LEFT JOIN likes l ON l.tweet_id = t.id
@@ -256,14 +256,14 @@ LEFT JOIN  retweets all_retweets ON all_retweets.tweet_id = t.id
 WHERE user_retweets.user_id = $2
 GROUP BY t.id, user_retweets.created_at
 ORDER BY user_retweets.created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $4::int OFFSET $3::int
 `
 
 type GetRetweetedTweetsByUserIDParams struct {
-	UserID   int32 `json:"user_id"`
-	UserID_2 int32 `json:"user_id_2"`
-	Limit    int32 `json:"limit"`
-	Offset   int32 `json:"offset"`
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
 }
 
 type GetRetweetedTweetsByUserIDRow struct {
@@ -281,10 +281,10 @@ type GetRetweetedTweetsByUserIDRow struct {
 // user_idが$1,$2だとGo側でuserID,userID_2となるため@を使って明示的に宣言し直す
 func (q *Queries) GetRetweetedTweetsByUserID(ctx context.Context, arg GetRetweetedTweetsByUserIDParams) ([]GetRetweetedTweetsByUserIDRow, error) {
 	rows, err := q.db.Query(ctx, getRetweetedTweetsByUserID,
-		arg.UserID,
-		arg.UserID_2,
-		arg.Limit,
-		arg.Offset,
+		arg.LoggedUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
 	)
 	if err != nil {
 		return nil, err

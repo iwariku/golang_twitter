@@ -199,14 +199,14 @@ SELECT
   t.content,
   user_retweets.created_at,
   COUNT(DISTINCT l.id) AS like_count,
-  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
+  MAX(CASE WHEN l.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_liked,
   COUNT(DISTINCT all_retweets.id) AS retweet_count,
-  MAX(CASE WHEN all_retweets.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
+  MAX(CASE WHEN all_retweets.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_retweeted
 FROM retweets user_retweets
 JOIN tweets t ON user_retweets.tweet_id = t.id
 LEFT JOIN likes l ON l.tweet_id = t.id
 LEFT JOIN  retweets all_retweets ON all_retweets.tweet_id = t.id
-WHERE user_retweets.user_id = $2
+WHERE user_retweets.user_id = @target_user_id
 GROUP BY t.id, user_retweets.created_at
 ORDER BY user_retweets.created_at DESC
-LIMIT $3 OFFSET $4;
+LIMIT @limit_val::int OFFSET @offset_val::int;

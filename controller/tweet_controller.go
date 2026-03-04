@@ -435,10 +435,10 @@ func (tc *TweetController) GetRetweetedTweetsByUserID(c *gin.Context) {
 	}
 
 	dbTweet, err := tc.Queries.GetRetweetedTweetsByUserID(c.Request.Context(), db.GetRetweetedTweetsByUserIDParams{
-		UserID:   loggedUserId,
-		UserID_2: targetUserId,
-		Limit:    limit,
-		Offset:   offset,
+		LoggedUserID: loggedUserId,
+		TargetUserID: targetUserId,
+		LimitVal:     limit,
+		OffsetVal:    offset,
 	})
 
 	tweetRes := make([]TweetResponse, len(dbTweet))
