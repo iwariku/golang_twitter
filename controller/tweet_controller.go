@@ -357,7 +357,7 @@ func (tc *TweetController) CreateRetweet(c *gin.Context) {
 		})
 		if err != nil {
 			log.Printf("データの更新に失敗しました")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "リツイートの削除に失敗しました"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "リツイートの登録に失敗しました"})
 			return
 		}
 	}
@@ -378,4 +378,68 @@ func (tc *TweetController) CreateRetweet(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, touchActionRetweetRes)
+}
+
+// 選択したユーザーがどのツイートをリツイートしているのかを見る
+// 必要なデータ。選択されたユーザーID、ログインしているユーザーID、LIMIT、OFFSET
+// 使う関数: GetRetweetedTweetsByUserID
+// api/retweetedtweet/:id?limit=1&offset=10
+
+// 参考になるもの: ツイート一覧のページネーションのロジック、ユーザー詳細のツイート一覧、JSのfetch
+func (tc *TweetController) GetRetweetedTweetsByUserID(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が違います"})
+	}
+
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+	}
+
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+	}
+
+	totalCount, err := tc.Queries.GetRetweetCountByUserID(c.Request.Context(), targetUserId)
+	if err != nil {
+		log.Printf("件数の取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+	}
+
+	dbTweet, err := tc.Queries.GetRetweetedTweetsByUserID(c.Request.Context(), db.GetRetweetedTweetsByUserIDParams{
+		UserID:   loggedUserId,
+		UserID_2: targetUserId,
+		Limit:    limit,
+		Offset:   offset,
+	})
+
+	tweetRes := make([]TweetResponse, len(dbTweet))
+	for i, t := range dbTweet {
+		tweetRes[i] = TweetResponse{
+			ID:           t.ID,
+			UserID:       t.UserID,
+			Content:      t.Content,
+			LikeCount:    t.LikeCount,
+			IsLiked:      t.IsLiked,
+			RetweetCount: t.RetweetCount,
+			IsRetweeted:  t.IsRetweeted,
+		}
+	}
+
+	paginatedTweetsRes := PaginatedTweetsResponse{
+		Tweets: tweetRes,
+		Limit:  int(limit),
+		Offset: int(offset),
+		Count:  int(totalCount),
+	}
+
+	c.JSON(http.StatusOK, paginatedTweetsRes)
 }

@@ -69,6 +69,7 @@ func main() {
 		})
 		authGroup.GET("/api/users/:id", uc.GetUser)
 		authGroup.GET("/api/users/:id/tweets", uc.GetTweetsByUserID)
+		authGroup.GET("/api/users/:id/retweets", tc.GetRetweetedTweetsByUserID)
 
 		authGroup.POST("/api/tweets/:id/like", tc.CreateLike)
 		authGroup.DELETE("/api/tweets/:id/like", tc.DeleteLike)

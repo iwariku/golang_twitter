@@ -206,6 +206,19 @@ func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (b
 	return exists, err
 }
 
+const getRetweetCountByUserID = `-- name: GetRetweetCountByUserID :one
+SELECT COUNT(*)
+FROM retweets
+WHERE user_id = $1
+`
+
+func (q *Queries) GetRetweetCountByUserID(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getRetweetCountByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getRetweetExists = `-- name: GetRetweetExists :one
 SELECT EXISTS (
   SELECT 1
@@ -265,6 +278,7 @@ type GetRetweetedTweetsByUserIDRow struct {
 }
 
 // 選択したユーザーがリツイートしているツイート一覧
+// user_idが$1,$2だとGo側でuserID,userID_2となるため@を使って明示的に宣言し直す
 func (q *Queries) GetRetweetedTweetsByUserID(ctx context.Context, arg GetRetweetedTweetsByUserIDParams) ([]GetRetweetedTweetsByUserIDRow, error) {
 	rows, err := q.db.Query(ctx, getRetweetedTweetsByUserID,
 		arg.UserID,

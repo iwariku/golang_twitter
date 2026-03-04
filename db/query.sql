@@ -57,6 +57,11 @@ SELECT COUNT(*)
 FROM tweets
 WHERE user_id = $1;
 
+-- name: GetRetweetCountByUserID :one
+SELECT COUNT(*)
+FROM retweets
+WHERE user_id = $1;
+
 -- いいね機能
 -- name: CreateLike :one
 INSERT INTO likes (
@@ -186,6 +191,7 @@ ORDER BY t.created_at DESC
 LIMIT @limit_val::int OFFSET @offset_val::int;
 
 -- 選択したユーザーがリツイートしているツイート一覧
+-- user_idが$1,$2だとGo側でuserID,userID_2となるため@を使って明示的に宣言し直す
 -- name: GetRetweetedTweetsByUserID :many
 SELECT
   t.id,
