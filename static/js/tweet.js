@@ -206,6 +206,10 @@ const dispatchPathTask = async () => {
     currentApiUrl = `/api/users/${idFromPath}/tweets`;
     loadTweets();
     setupPagination();
+  } else if (path.includes('user-retweet')) {
+    currentApiUrl = `/api/users/${idFromPath}/retweets`;
+    loadTweets();
+    setupPagination();
   } else if (path.includes('post')) {
     post();
   } else if (path.includes('tweet-detail')) {

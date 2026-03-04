@@ -69,6 +69,9 @@ func main() {
 		})
 		authGroup.GET("/api/users/:id", uc.GetUser)
 		authGroup.GET("/api/users/:id/tweets", uc.GetTweetsByUserIDWithLikesWithRetweets)
+		authGroup.GET("/user-retweet/:id", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "user-retweet.html", nil)
+		})
 		authGroup.GET("/api/users/:id/retweets", tc.GetRetweetedTweetsByUserID)
 
 		authGroup.POST("/api/tweets/:id/like", tc.CreateLike)
