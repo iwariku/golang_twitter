@@ -73,6 +73,11 @@ func main() {
 		})
 		authGroup.GET("/api/users/:id/retweets", tc.GetRetweetedTweetsByUserID)
 
+		// authGroup.GET("/user-bookmarks", func(c *gin.Context) {
+		// 	c.HTML(http.StatusOK, "user-bookmarks.html", nil)
+		// })
+		authGroup.GET("/api/user/bookmarks", tc.GetBookmarkedTweetsByUserID)
+
 		authGroup.POST("/api/tweets/:id/like", tc.CreateLike)
 		authGroup.DELETE("/api/tweets/:id/like", tc.DeleteLike)
 
