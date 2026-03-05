@@ -67,9 +67,9 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 }
 
 // ===================
-// いいね、リツイート付きツイート一覧機能
+// ツイート一覧機能
 // ===================
-func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
+func (tc *TweetController) GetTweets(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
@@ -96,7 +96,7 @@ func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
 		return
 	}
 
-	dbTweets, err := tc.Queries.GetTweetsWithLikesWithRetweets(c.Request.Context(), db.GetTweetsWithLikesWithRetweetsParams{
+	dbTweets, err := tc.Queries.GetTweets(c.Request.Context(), db.GetTweetsParams{
 		UserID: loggedUserId,
 		Limit:  limit,
 		Offset: offset,
@@ -130,9 +130,9 @@ func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
 }
 
 // ===================
-// いいね、リツイート付きツイート詳細機能
+// ツイート詳細機能
 // ===================
-func (tc *TweetController) GetTweetWithLikesWithRetweets(c *gin.Context) {
+func (tc *TweetController) GetTweet(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
@@ -147,7 +147,7 @@ func (tc *TweetController) GetTweetWithLikesWithRetweets(c *gin.Context) {
 		return
 	}
 
-	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+	dbTweet, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
@@ -329,7 +329,7 @@ func (tc *TweetController) DeleteRetweet(c *gin.Context) {
 		}
 	}
 
-	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+	dbTweet, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
@@ -382,7 +382,7 @@ func (tc *TweetController) CreateRetweet(c *gin.Context) {
 		}
 	}
 
-	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+	dbTweet, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
