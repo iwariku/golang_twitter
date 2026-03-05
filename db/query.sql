@@ -81,6 +81,15 @@ INSERT INTO retweets (
 )
 RETURNING *;
 
+-- name: CreateBookmark :exec
+INSERT INTO bookmarks (
+  user_id,
+  tweet_id
+) VALUES (
+  $1, $2
+)
+RETURNING *;
+
 -- name: DeleteLike :exec
 DELETE 
 FROM likes
@@ -89,6 +98,11 @@ WHERE user_id = $1 AND tweet_id = $2;
 -- name: DeleteRetweet :exec
 DELETE
 FROM retweets
+WHERE user_id = $1 AND tweet_id = $2;
+
+-- name: DeleteBookmark :exec
+DELETE
+FROM bookmarks
 WHERE user_id = $1 AND tweet_id = $2;
 
 -- GetTweetWithLikesの単体SQL
@@ -103,6 +117,13 @@ SELECT EXISTS (
 SELECT EXISTS (
   SELECT 1
   FROM retweets
+  WHERE user_id = $1 AND tweet_id = $2
+);
+
+-- name: GetBookmarkExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM bookmarks
   WHERE user_id = $1 AND tweet_id = $2
 );
 
@@ -134,9 +155,8 @@ GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3;
 
--- リツイート機能
--- ツイート詳細、いいね、リツイート付き(リツイートができたら巻き替え)
--- name: GetTweetWithLikesWithRetweets :one
+-- ツイート詳細、いいね、リツイート、ブックマーク付き
+-- name: GetTweet :one
 SELECT
   t.id,
   t.user_id,
@@ -145,16 +165,18 @@ SELECT
   COUNT(DISTINCT l.id) AS like_count,
   MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
   COUNT(DISTINCT r.id) AS retweet_count,
-  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
+  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted,
+  MAX(CASE WHEN b.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_bookmarked
 FROM tweets t
 LEFT JOIN likes l ON l.tweet_id = t.id
 LEFT JOIN retweets r ON r.tweet_id = t.id
+LEFT JOIN bookmarks b ON b.tweet_id = t.id
 WHERE t.id = $2
 GROUP BY t.id;
 
 
--- ツイート一覧、いいね、リツイート付き(リツイートができたら巻き替え)
--- name: GetTweetsWithLikesWithRetweets :many
+-- ツイート一覧、いいね、リツイート、ブックマーク付き
+-- name: GetTweets :many
 SELECT
   t.id,
   t.user_id,
@@ -163,16 +185,18 @@ SELECT
   COUNT(DISTINCT l.id) AS like_count,
   MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
   COUNT(DISTINCT r.id) AS retweet_count,
-  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted
+  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted,
+  MAX(CASE WHEN b.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_bookmarked
 FROM tweets t
 LEFT JOIN likes l ON l.tweet_id = t.id
 LEFT JOIN retweets r ON r.tweet_id = t.id
+LEFT JOIN bookmarks b ON b.tweet_id = t.id
 GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3;
 
--- ユーザー詳細でのツイート一覧、いいね、リツイート付き(リツイートができたら巻き替え)
--- name: GetTweetsByUserIDWithLikesWithRetweets :many
+-- ユーザー詳細でのツイート一覧、いいね、リツイート、ブックマーク付き
+-- name: GetTweetsByUserID :many
 SELECT
   t.id,
   t.user_id,
@@ -181,17 +205,18 @@ SELECT
   COUNT(DISTINCT l.id) AS like_count,
   MAX(CASE WHEN l.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_liked,
   COUNT(DISTINCT r.id) AS retweet_count,
-  MAX(CASE WHEN r.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_retweeted
+  MAX(CASE WHEN r.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_retweeted,
+  MAX(CASE WHEN b.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_bookmarked
 FROM tweets t
 LEFT JOIN likes l ON l.tweet_id = t.id
 LEFT JOIN  retweets r ON r.tweet_id = t.id
+LEFT JOIN bookmarks b ON b.tweet_id = t.id
 WHERE t.user_id = @target_user_id::int
 GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT @limit_val::int OFFSET @offset_val::int;
 
 -- 選択したユーザーがリツイートしているツイート一覧
--- user_idが$1,$2だとGo側でuserID,userID_2となるため@を使って明示的に宣言し直す
 -- name: GetRetweetedTweetsByUserID :many
 SELECT
   t.id,
@@ -201,12 +226,35 @@ SELECT
   COUNT(DISTINCT l.id) AS like_count,
   MAX(CASE WHEN l.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_liked,
   COUNT(DISTINCT all_retweets.id) AS retweet_count,
-  MAX(CASE WHEN all_retweets.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_retweeted
+  MAX(CASE WHEN all_retweets.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_retweeted,
+  MAX(CASE WHEN b.user_id = @logged_user_id::int THEN 1 ELSE 0 END)::boolean AS is_bookmarked
 FROM retweets user_retweets
 JOIN tweets t ON user_retweets.tweet_id = t.id
 LEFT JOIN likes l ON l.tweet_id = t.id
 LEFT JOIN  retweets all_retweets ON all_retweets.tweet_id = t.id
+LEFT JOIN bookmarks b ON b.tweet_id = t.id
 WHERE user_retweets.user_id = @target_user_id
 GROUP BY t.id, user_retweets.created_at
 ORDER BY user_retweets.created_at DESC
 LIMIT @limit_val::int OFFSET @offset_val::int;
+
+-- ログインしているユーザーのブックマークしたツイート一覧
+-- name: GetBookmarkedTweetsByUserID :many
+SELECT
+  t.id,
+  t.user_id,
+  t.content,
+  t.created_at,
+  COUNT(DISTINCT l.id) AS like_count,
+  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_liked,
+  COUNT(DISTINCT r.id) AS retweet_count,
+  MAX(CASE WHEN r.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_retweeted,
+  MAX(CASE WHEN b.user_id = $1 THEN 1 ELSE 0 END)::boolean AS is_bookmarked
+FROM tweets t
+LEFT JOIN likes l ON l.tweet_id = t.id
+LEFT JOIN retweets r ON r.tweet_id = t.id
+LEFT JOIN bookmarks b ON b.tweet_id = t.id
+WHERE b.user_id = $1
+GROUP BY t.id
+ORDER BY t.created_at DESC
+LIMIT $2 OFFSET $3;
