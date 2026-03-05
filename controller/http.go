@@ -26,14 +26,14 @@ type TweetRequest struct {
 
 // 構造体の中に構造体を入れる
 type TweetResponse struct {
-	ID      int32  `json:"id"`
-	UserID  int32  `json:"user_id"`
-	Content string `json:"content"`
-	// ここにいいねとカウント数を足す
-	LikeCount    int64 `json:"like_count"`
-	IsLiked      bool  `json:"is_liked"`
-	RetweetCount int64 `json:"retweet_count"`
-	IsRetweeted  bool  `json:"is_retweeted"`
+	ID           int32  `json:"id"`
+	UserID       int32  `json:"user_id"`
+	Content      string `json:"content"`
+	LikeCount    int64  `json:"like_count"`
+	IsLiked      bool   `json:"is_liked"`
+	RetweetCount int64  `json:"retweet_count"`
+	IsRetweeted  bool   `json:"is_retweeted"`
+	IsBookmarked bool   `json:"is_bookmarded"`
 }
 
 // この構造体はそのままでいいんじゃない？ツイート一覧を返却するのであれば
@@ -54,4 +54,9 @@ type TouchActionRetweetResponse struct {
 	TweetID      int32 `json:"tweet_id"`
 	RetweetCount int64 `json:"retweet_count"`
 	IsRetweeted  bool  `json:"is_retweeted"`
+}
+
+type TouchActionBookmarkResponse struct {
+	TweetID      int32 `json:"tweet_id"`
+	IsBookmarked bool  `json:"is_bookmarded"`
 }

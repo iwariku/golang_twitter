@@ -79,6 +79,8 @@ func main() {
 		authGroup.POST("/api/tweets/:id/retweet", tc.CreateRetweet)
 		authGroup.DELETE("/api/tweets/:id/retweet", tc.DeleteRetweet)
 
+		authGroup.POST("/api/tweets/:id/bookmark", tc.CreateBookmark)
+		authGroup.DELETE("/api/tweets/:id/bookmark", tc.DeleteBookmark)
 	}
 
 	r.Run()
