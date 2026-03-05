@@ -184,7 +184,7 @@ func (uc *UserController) GetUser(c *gin.Context) {
 // ===================
 // いいね、リツイート付きユーザー詳細機能
 // ===================
-func (uc *UserController) GetTweetsByUserIDWithLikesWithRetweets(c *gin.Context) {
+func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 	targetUserId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
@@ -218,7 +218,7 @@ func (uc *UserController) GetTweetsByUserIDWithLikesWithRetweets(c *gin.Context)
 		return
 	}
 
-	dbTweets, err := uc.Queries.GetTweetsByUserIDWithLikesWithRetweets(c.Request.Context(), db.GetTweetsByUserIDWithLikesWithRetweetsParams{
+	dbTweets, err := uc.Queries.GetTweetsByUserID(c.Request.Context(), db.GetTweetsByUserIDParams{
 		TargetUserID: targetUserId,
 		LoggedUserID: loggedUserId,
 		LimitVal:     limit,
