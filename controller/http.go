@@ -44,6 +44,10 @@ type PaginatedTweetsResponse struct {
 	Count  int             `json:"count"`
 }
 
+type BookmarkedTweetResponse struct {
+	Tweets []TweetResponse `json:"tweets"`
+}
+
 type TouchActionResultResponse struct {
 	TweetID   int32 `json:"tweet_id"`
 	LikeCount int64 `json:"like_count"`

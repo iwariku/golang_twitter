@@ -626,6 +626,14 @@ func (tc *TweetController) GetBookmarkedTweetsByUserID(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, tweetRes)
+	bookmarkedTweetRes := BookmarkedTweetResponse{
+		Tweets: tweetRes,
+	}
+
+	type BookmarkedTweetResponse struct {
+		Tweets []TweetResponse `json:"tweets"`
+	}
+
+	c.JSON(http.StatusOK, bookmarkedTweetRes)
 
 }

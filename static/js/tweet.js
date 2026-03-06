@@ -213,17 +213,20 @@ const dispatchPathTask = async () => {
   const path = window.location.pathname;
   const pathParts = path.split('/');
   const idFromPath = pathParts[pathParts.length - 1];
+  console.log('Current Path:', path); // デバッグ用
 
   if (path.includes('home')) {
     currentApiUrl = '/api/tweets';
     loadTweets();
     setupPagination();
   } else if (path.includes('user-detail')) {
+    console.log('Current Path:', path); // デバッグ用
     // クエリパラメータではなく、パスから取ったIDをチェック
     if (!idFromPath || isNaN(idFromPath)) {
       console.error('IDがパスに含まれていません');
       return;
     }
+    console.log('Current Path:', path); // デバッグ用
     // 先にユーザー情報を取得して画面に出す（終わるまで次へ行かない
     // 先にDBにアクセスしてデータの取得に失敗したため
     await getUser();
@@ -234,6 +237,11 @@ const dispatchPathTask = async () => {
     currentApiUrl = `/api/users/${idFromPath}/retweets`;
     loadTweets();
     setupPagination();
+  } else if (path.includes('user-bookmarks')) {
+    console.log('✅ Bookmark branch started'); // これが出るか確認！
+    currentApiUrl = `/api/user/bookmarks`;
+    console.log('Target API URL:', currentApiUrl);
+    loadTweets();
   } else if (path.includes('post')) {
     post();
   } else if (path.includes('tweet-detail')) {
