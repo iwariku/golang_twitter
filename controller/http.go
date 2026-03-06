@@ -33,7 +33,7 @@ type TweetResponse struct {
 	IsLiked      bool   `json:"is_liked"`
 	RetweetCount int64  `json:"retweet_count"`
 	IsRetweeted  bool   `json:"is_retweeted"`
-	IsBookmarked bool   `json:"is_bookmarded"`
+	IsBookmarked bool   `json:"is_bookmarked"`
 }
 
 // この構造体はそのままでいいんじゃない？ツイート一覧を返却するのであれば
@@ -58,5 +58,5 @@ type TouchActionRetweetResponse struct {
 
 type TouchActionBookmarkResponse struct {
 	TweetID      int32 `json:"tweet_id"`
-	IsBookmarked bool  `json:"is_bookmarded"`
+	IsBookmarked bool  `json:"is_bookmarked"`
 }

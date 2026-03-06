@@ -48,6 +48,27 @@ const setupRetweetButton = (btn, tweetId, countLabel) => {
   });
 };
 
+// ブックマーク機能
+const setupBookmarkButton = (btn, tweetId) => {
+  btn.addEventListener('click', async () => {
+    const isBookmarked = btn.dataset.isBookmarked === 'true';
+    const method = isBookmarked ? 'DELETE' : 'POST';
+
+    const response = await fetch(`/api/tweets/${tweetId}/bookmark`, {
+      method: method,
+    });
+    if (!response.ok) {
+      console.error('サーバーエラーが発生しました', response.status);
+      return;
+    }
+
+    const data = await response.json();
+
+    btn.dataset.isBookmarked = data.is_bookmarked;
+    btn.textContent = data.is_bookmarked ? '📕' : '📖';
+  });
+};
+
 // ツイートカード作成
 const createTweetCard = (tweet) => {
   // デバッグ用
@@ -68,6 +89,7 @@ const createTweetCard = (tweet) => {
         <span class="js-like-count">${tweet.like_count}</span>
         <button class="js-retweet-btn" data-is-retweeted="${tweet.is_retweeted}">${tweet.is_retweeted ? '♻️' : '♻︎'}</button>
         <span class="js-retweet-count">${tweet.retweet_count}</span>
+        <button class="js-bookmark-btn" data-is-bookmarked="${tweet.is_bookmarked}">${tweet.is_bookmarked ? '📕' : '📖'}</button>
       </div>
     </div>`;
 
@@ -75,9 +97,11 @@ const createTweetCard = (tweet) => {
   const likeLabel = tweetCard.querySelector('.js-like-count');
   const retweetBtn = tweetCard.querySelector('.js-retweet-btn');
   const retweetLabel = tweetCard.querySelector('.js-retweet-count');
+  const bookmarkBtn = tweetCard.querySelector('.js-bookmark-btn');
 
   setupLikeButton(likeBtn, tweet.id, likeLabel);
   setupRetweetButton(retweetBtn, tweet.id, retweetLabel);
+  setupBookmarkButton(bookmarkBtn, tweet.id);
 
   return tweetCard;
 };

@@ -116,6 +116,7 @@ func (tc *TweetController) GetTweets(c *gin.Context) {
 			IsLiked:      t.IsLiked,
 			RetweetCount: t.RetweetCount,
 			IsRetweeted:  t.IsRetweeted,
+			IsBookmarked: t.IsBookmarked,
 		}
 	}
 
@@ -165,6 +166,7 @@ func (tc *TweetController) GetTweet(c *gin.Context) {
 		IsLiked:      dbTweet.IsLiked,
 		RetweetCount: dbTweet.RetweetCount,
 		IsRetweeted:  dbTweet.IsRetweeted,
+		IsBookmarked: dbTweet.IsBookmarked,
 	}
 
 	c.JSON(http.StatusOK, tweetRes)
@@ -565,6 +567,7 @@ func (tc *TweetController) GetRetweetedTweetsByUserID(c *gin.Context) {
 			IsLiked:      t.IsLiked,
 			RetweetCount: t.RetweetCount,
 			IsRetweeted:  t.IsRetweeted,
+			IsBookmarked: t.IsBookmarked,
 		}
 	}
 
