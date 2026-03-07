@@ -263,7 +263,7 @@ func (tc *TweetController) CreateLike(c *gin.Context) {
 	}
 
 	if hasLiked == false {
-		_, err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
+		err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
 			UserID:  loggedUserId,
 			TweetID: tweetId,
 		})
@@ -375,9 +375,8 @@ func (tc *TweetController) CreateRetweet(c *gin.Context) {
 		return
 	}
 
-	// 値を受け取らないならsqlcを :oneから :execに変更してもいいんじゃない
 	if hasRetweeted == false {
-		_, err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
+		err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
 			UserID:  loggedUserId,
 			TweetID: targetTweetId,
 		})

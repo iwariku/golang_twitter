@@ -42,7 +42,7 @@ func (q *Queries) CreateBookmark(ctx context.Context, arg CreateBookmarkParams) 
 	return err
 }
 
-const createLike = `-- name: CreateLike :one
+const createLike = `-- name: CreateLike :exec
 INSERT INTO likes (
   user_id,
   tweet_id
@@ -58,19 +58,12 @@ type CreateLikeParams struct {
 }
 
 // いいね機能
-func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) (Like, error) {
-	row := q.db.QueryRow(ctx, createLike, arg.UserID, arg.TweetID)
-	var i Like
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.TweetID,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) error {
+	_, err := q.db.Exec(ctx, createLike, arg.UserID, arg.TweetID)
+	return err
 }
 
-const createRetweet = `-- name: CreateRetweet :one
+const createRetweet = `-- name: CreateRetweet :exec
 INSERT INTO retweets (
   user_id,
   tweet_id
@@ -85,16 +78,9 @@ type CreateRetweetParams struct {
 	TweetID int32 `json:"tweet_id"`
 }
 
-func (q *Queries) CreateRetweet(ctx context.Context, arg CreateRetweetParams) (Retweet, error) {
-	row := q.db.QueryRow(ctx, createRetweet, arg.UserID, arg.TweetID)
-	var i Retweet
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.TweetID,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) CreateRetweet(ctx context.Context, arg CreateRetweetParams) error {
+	_, err := q.db.Exec(ctx, createRetweet, arg.UserID, arg.TweetID)
+	return err
 }
 
 const createTweet = `-- name: CreateTweet :one

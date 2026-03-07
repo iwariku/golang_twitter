@@ -47,7 +47,7 @@ FROM retweets
 WHERE user_id = $1;
 
 -- いいね機能
--- name: CreateLike :one
+-- name: CreateLike :exec
 INSERT INTO likes (
   user_id,
   tweet_id
@@ -56,7 +56,7 @@ INSERT INTO likes (
 )
 RETURNING *;
 
--- name: CreateRetweet :one
+-- name: CreateRetweet :exec
 INSERT INTO retweets (
   user_id,
   tweet_id
