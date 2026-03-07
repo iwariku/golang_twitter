@@ -185,17 +185,17 @@ func (uc *UserController) GetUser(c *gin.Context) {
 // いいね、リツイート付きユーザー詳細機能
 // ===================
 func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
-	targetUserId, err := utils.ParseParamInt32(c, "id")
-	if err != nil {
-		log.Printf("パラメータ解析に失敗しました: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
-		return
-	}
-
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
 		return
 	}
 
