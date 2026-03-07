@@ -215,7 +215,7 @@ func (tc *TweetController) DeleteLike(c *gin.Context) {
 		}
 	}
 
-	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+	dbTweets, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     tweetId,
 	})
@@ -270,7 +270,7 @@ func (tc *TweetController) CreateLike(c *gin.Context) {
 		}
 	}
 
-	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+	dbTweets, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     tweetId,
 	})
