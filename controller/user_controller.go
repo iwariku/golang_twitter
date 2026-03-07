@@ -240,6 +240,7 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 			IsLiked:      t.IsLiked,
 			RetweetCount: t.RetweetCount,
 			IsRetweeted:  t.IsRetweeted,
+			IsBookmarked: t.IsBookmarked,
 		}
 	}
 
