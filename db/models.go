@@ -15,6 +15,14 @@ type Bookmark struct {
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
+type Follow struct {
+	ID          int32            `json:"id"`
+	FollowingID int32            `json:"following_id"`
+	FollowerID  int32            `json:"follower_id"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+}
+
 type Like struct {
 	ID        int32            `json:"id"`
 	UserID    int32            `json:"user_id"`
