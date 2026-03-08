@@ -215,6 +215,64 @@ GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3;
 
+-- フォロー関連
+-- name: CreateFollow :exec
+INSERT INTO follows (
+  follower_id,
+  following_id
+) VALUES (
+  $1, $2
+);
+
+-- name: DeleteFollow :exec
+DELETE
+FROM follows
+WHERE follower_id = $1 AND following_id = $2;
+
+-- name: GetFollowExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM follows
+  WHERE follower_id = $1 AND following_id = $2
+);
+
+-- フォロー一覧で閲覧
+-- name: GetFollowings :many
+SELECT
+  u.id,
+  u.user_name,
+  u.nick_name,
+  u.profile_image,
+  EXISTS (
+    SELECT 1
+    FROM follows check_f
+    WHERE check_f.follower_id = $1 AND check_f.following_id = u.id
+  ) AS is_followed
+FROM follows f
+INNER JOIN users u ON f.following_id = u.id
+WHERE f.follower_id = $2
+ORDER BY f.created_at DESC
+LIMIT $3 OFFSET $4;
+
+
+--  フォロワー一覧
+-- name: GetFollowers :many
+SELECT
+  u.id,
+  u.user_name,
+  u.nick_name,
+  u.profile_image,
+  EXISTS (
+    SELECT 1
+    FROM follows check_f
+    WHERE check_f.follower_id = $1 AND check_f.following_id = u.id
+  ) AS is_followed
+FROM follows f
+INNER JOIN users u ON f.follower_id = u.id
+WHERE f.following_id = $2
+ORDER BY f.created_at DESC
+LIMIT $3 OFFSET $4;
+
 -- DM機能
 -- グループ作成を実装する
 -- :oneにするのはこの作成したgroupsテーブルのidを別のテーブルで使用するため。必要がない場合は:execに変更する
@@ -232,8 +290,8 @@ RETURNING *;
 -- これはdm_groupsではnameカラムしか持たず、ユーザー情報はdm_group_membersに入れるという設計にしているため
 -- name: AddMemberToGroup :one
 INSERT INTO dm_group_members (
-  user_id
-  dm_group_id,
+  user_id,
+  dm_group_id
 ) VALUES (
   $1, $2
 )
