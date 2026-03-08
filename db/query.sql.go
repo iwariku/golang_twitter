@@ -24,28 +24,28 @@ func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text)
 
 const addMemberToGroup = `-- name: AddMemberToGroup :one
 INSERT INTO dm_group_members (
-  dm_group_id,
-  user_id
+  user_id,
+  dm_group_id
 ) VALUES (
   $1, $2
 )
-RETURNING id, dm_group_id, user_id, created_at
+RETURNING id, user_id, dm_group_id, created_at
 `
 
 type AddMemberToGroupParams struct {
-	DmGroupID int32 `json:"dm_group_id"`
 	UserID    int32 `json:"user_id"`
+	DmGroupID int32 `json:"dm_group_id"`
 }
 
 // グループが作成されたら、ログインしているユーザーとグループidを使って作成されたグループに自分を入れる
 // これはdm_groupsではnameカラムしか持たず、ユーザー情報はdm_group_membersに入れるという設計にしているため
 func (q *Queries) AddMemberToGroup(ctx context.Context, arg AddMemberToGroupParams) (DmGroupMember, error) {
-	row := q.db.QueryRow(ctx, addMemberToGroup, arg.DmGroupID, arg.UserID)
+	row := q.db.QueryRow(ctx, addMemberToGroup, arg.UserID, arg.DmGroupID)
 	var i DmGroupMember
 	err := row.Scan(
 		&i.ID,
-		&i.DmGroupID,
 		&i.UserID,
+		&i.DmGroupID,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -68,6 +68,26 @@ type CreateBookmarkParams struct {
 
 func (q *Queries) CreateBookmark(ctx context.Context, arg CreateBookmarkParams) error {
 	_, err := q.db.Exec(ctx, createBookmark, arg.UserID, arg.TweetID)
+	return err
+}
+
+const createFollow = `-- name: CreateFollow :exec
+INSERT INTO follows (
+  follower_id,
+  following_id
+) VALUES (
+  $1, $2
+)
+`
+
+type CreateFollowParams struct {
+	FollowerID  int32 `json:"follower_id"`
+	FollowingID int32 `json:"following_id"`
+}
+
+// フォロー関連
+func (q *Queries) CreateFollow(ctx context.Context, arg CreateFollowParams) error {
+	_, err := q.db.Exec(ctx, createFollow, arg.FollowerID, arg.FollowingID)
 	return err
 }
 
@@ -121,7 +141,7 @@ INSERT INTO dm_messages (
 ) VALUES (
   $1, $2, $3
 )
-RETURNING id, dm_group_id, user_id, message, created_at
+RETURNING id, user_id, dm_group_id, message, created_at
 `
 
 type CreateMessageParams struct {
@@ -138,8 +158,8 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (D
 	var i DmMessage
 	err := row.Scan(
 		&i.ID,
-		&i.DmGroupID,
 		&i.UserID,
+		&i.DmGroupID,
 		&i.Message,
 		&i.CreatedAt,
 	)
@@ -258,6 +278,22 @@ func (q *Queries) DeleteBookmark(ctx context.Context, arg DeleteBookmarkParams) 
 	return err
 }
 
+const deleteFollow = `-- name: DeleteFollow :exec
+DELETE
+FROM follows
+WHERE follower_id = $1 AND following_id = $2
+`
+
+type DeleteFollowParams struct {
+	FollowerID  int32 `json:"follower_id"`
+	FollowingID int32 `json:"following_id"`
+}
+
+func (q *Queries) DeleteFollow(ctx context.Context, arg DeleteFollowParams) error {
+	_, err := q.db.Exec(ctx, deleteFollow, arg.FollowerID, arg.FollowingID)
+	return err
+}
+
 const deleteLike = `-- name: DeleteLike :exec
 DELETE 
 FROM likes
@@ -369,6 +405,156 @@ func (q *Queries) GetBookmarkedTweetsByUserID(ctx context.Context, arg GetBookma
 			&i.RetweetCount,
 			&i.IsRetweeted,
 			&i.IsBookmarked,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFollowExists = `-- name: GetFollowExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM follows
+  WHERE follower_id = $1 AND following_id = $2
+)
+`
+
+type GetFollowExistsParams struct {
+	FollowerID  int32 `json:"follower_id"`
+	FollowingID int32 `json:"following_id"`
+}
+
+func (q *Queries) GetFollowExists(ctx context.Context, arg GetFollowExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, getFollowExists, arg.FollowerID, arg.FollowingID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getFollowers = `-- name: GetFollowers :many
+SELECT
+  u.id,
+  u.user_name,
+  u.nick_name,
+  u.profile_image,
+  EXISTS (
+    SELECT 1
+    FROM follows check_f
+    WHERE check_f.follower_id = $1 AND check_f.following_id = u.id
+  ) AS is_followed
+FROM follows f
+INNER JOIN users u ON f.follower_id = u.id
+WHERE f.following_id = $2
+ORDER BY f.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type GetFollowersParams struct {
+	FollowerID  int32 `json:"follower_id"`
+	FollowingID int32 `json:"following_id"`
+	Limit       int32 `json:"limit"`
+	Offset      int32 `json:"offset"`
+}
+
+type GetFollowersRow struct {
+	ID           int32       `json:"id"`
+	UserName     pgtype.Text `json:"user_name"`
+	NickName     pgtype.Text `json:"nick_name"`
+	ProfileImage pgtype.Text `json:"profile_image"`
+	IsFollowed   bool        `json:"is_followed"`
+}
+
+// フォロワー一覧
+func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]GetFollowersRow, error) {
+	rows, err := q.db.Query(ctx, getFollowers,
+		arg.FollowerID,
+		arg.FollowingID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFollowersRow
+	for rows.Next() {
+		var i GetFollowersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserName,
+			&i.NickName,
+			&i.ProfileImage,
+			&i.IsFollowed,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFollowings = `-- name: GetFollowings :many
+SELECT
+  u.id,
+  u.user_name,
+  u.nick_name,
+  u.profile_image,
+  EXISTS (
+    SELECT 1
+    FROM follows check_f
+    WHERE check_f.follower_id = $1 AND check_f.following_id = u.id
+  ) AS is_followed
+FROM follows f
+INNER JOIN users u ON f.following_id = u.id
+WHERE f.follower_id = $2
+ORDER BY f.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type GetFollowingsParams struct {
+	FollowerID   int32 `json:"follower_id"`
+	FollowerID_2 int32 `json:"follower_id_2"`
+	Limit        int32 `json:"limit"`
+	Offset       int32 `json:"offset"`
+}
+
+type GetFollowingsRow struct {
+	ID           int32       `json:"id"`
+	UserName     pgtype.Text `json:"user_name"`
+	NickName     pgtype.Text `json:"nick_name"`
+	ProfileImage pgtype.Text `json:"profile_image"`
+	IsFollowed   bool        `json:"is_followed"`
+}
+
+// フォロー一覧で閲覧
+func (q *Queries) GetFollowings(ctx context.Context, arg GetFollowingsParams) ([]GetFollowingsRow, error) {
+	rows, err := q.db.Query(ctx, getFollowings,
+		arg.FollowerID,
+		arg.FollowerID_2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFollowingsRow
+	for rows.Next() {
+		var i GetFollowingsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserName,
+			&i.NickName,
+			&i.ProfileImage,
+			&i.IsFollowed,
 		); err != nil {
 			return nil, err
 		}
