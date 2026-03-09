@@ -42,7 +42,7 @@ func (q *Queries) CreateBookmark(ctx context.Context, arg CreateBookmarkParams) 
 	return err
 }
 
-const createLike = `-- name: CreateLike :one
+const createLike = `-- name: CreateLike :exec
 INSERT INTO likes (
   user_id,
   tweet_id
@@ -58,19 +58,12 @@ type CreateLikeParams struct {
 }
 
 // いいね機能
-func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) (Like, error) {
-	row := q.db.QueryRow(ctx, createLike, arg.UserID, arg.TweetID)
-	var i Like
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.TweetID,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) error {
+	_, err := q.db.Exec(ctx, createLike, arg.UserID, arg.TweetID)
+	return err
 }
 
-const createRetweet = `-- name: CreateRetweet :one
+const createRetweet = `-- name: CreateRetweet :exec
 INSERT INTO retweets (
   user_id,
   tweet_id
@@ -85,16 +78,9 @@ type CreateRetweetParams struct {
 	TweetID int32 `json:"tweet_id"`
 }
 
-func (q *Queries) CreateRetweet(ctx context.Context, arg CreateRetweetParams) (Retweet, error) {
-	row := q.db.QueryRow(ctx, createRetweet, arg.UserID, arg.TweetID)
-	var i Retweet
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.TweetID,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) CreateRetweet(ctx context.Context, arg CreateRetweetParams) error {
+	_, err := q.db.Exec(ctx, createRetweet, arg.UserID, arg.TweetID)
+	return err
 }
 
 const createTweet = `-- name: CreateTweet :one
@@ -520,48 +506,6 @@ func (q *Queries) GetTweetCountByUserID(ctx context.Context, userID int32) (int6
 	return count, err
 }
 
-const getTweetWithLikes = `-- name: GetTweetWithLikes :one
-SELECT
-  t.id,
-  t.user_id,
-  t.content,
-  t.created_at,
-  COUNT(l.id) AS like_count,
-  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
-FROM tweets t
-LEFT JOIN likes l ON l.tweet_id = t.id
-WHERE t.id = $2
-GROUP BY t.id
-`
-
-type GetTweetWithLikesParams struct {
-	UserID int32 `json:"user_id"`
-	ID     int32 `json:"id"`
-}
-
-type GetTweetWithLikesRow struct {
-	ID        int32            `json:"id"`
-	UserID    int32            `json:"user_id"`
-	Content   string           `json:"content"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	LikeCount int64            `json:"like_count"`
-	IsLiked   bool             `json:"is_liked"`
-}
-
-func (q *Queries) GetTweetWithLikes(ctx context.Context, arg GetTweetWithLikesParams) (GetTweetWithLikesRow, error) {
-	row := q.db.QueryRow(ctx, getTweetWithLikes, arg.UserID, arg.ID)
-	var i GetTweetWithLikesRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Content,
-		&i.CreatedAt,
-		&i.LikeCount,
-		&i.IsLiked,
-	)
-	return i, err
-}
-
 const getTweets = `-- name: GetTweets :many
 SELECT
   t.id,
@@ -696,128 +640,6 @@ func (q *Queries) GetTweetsByUserID(ctx context.Context, arg GetTweetsByUserIDPa
 			&i.RetweetCount,
 			&i.IsRetweeted,
 			&i.IsBookmarked,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getTweetsByUserIDWithLikes = `-- name: GetTweetsByUserIDWithLikes :many
-SELECT
-  t.id,
-  t.user_id,
-  t.content,
-  t.created_at,
-  COUNT (l.id) AS like_count,
-  -- 条件に合う行が存在した時1とする。この1でtrue/falseを判断する
-  MAX(CASE WHEN l.user_id = $1::int THEN 1 ELSE 0 END)::boolean AS is_liked
-FROM tweets t
-LEFT JOIN likes l ON l.tweet_id = t.id
-WHERE t.user_id = $2::int
-GROUP BY t.id
-ORDER BY t.created_at DESC
-LIMIT $4::int OFFSET $3::int
-`
-
-type GetTweetsByUserIDWithLikesParams struct {
-	LoggedUserID int32 `json:"logged_user_id"`
-	TargetUserID int32 `json:"target_user_id"`
-	OffsetVal    int32 `json:"offset_val"`
-	LimitVal     int32 `json:"limit_val"`
-}
-
-type GetTweetsByUserIDWithLikesRow struct {
-	ID        int32            `json:"id"`
-	UserID    int32            `json:"user_id"`
-	Content   string           `json:"content"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	LikeCount int64            `json:"like_count"`
-	IsLiked   bool             `json:"is_liked"`
-}
-
-func (q *Queries) GetTweetsByUserIDWithLikes(ctx context.Context, arg GetTweetsByUserIDWithLikesParams) ([]GetTweetsByUserIDWithLikesRow, error) {
-	rows, err := q.db.Query(ctx, getTweetsByUserIDWithLikes,
-		arg.LoggedUserID,
-		arg.TargetUserID,
-		arg.OffsetVal,
-		arg.LimitVal,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTweetsByUserIDWithLikesRow
-	for rows.Next() {
-		var i GetTweetsByUserIDWithLikesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Content,
-			&i.CreatedAt,
-			&i.LikeCount,
-			&i.IsLiked,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getTweetsWithLikes = `-- name: GetTweetsWithLikes :many
-SELECT 
-  t.id,
-  t.user_id,
-  t.content,
-  t.created_at,
-  COUNT(l.id) AS like_count,
-  MAX(CASE WHEN l.user_id = $1 THEN 1 ELSE 0 END)::boolean is_liked
-FROM tweets t
-LEFT JOIN likes l ON l.tweet_id = t.id
-GROUP BY t.id
-ORDER BY t.created_at DESC
-LIMIT $2 OFFSET $3
-`
-
-type GetTweetsWithLikesParams struct {
-	UserID int32 `json:"user_id"`
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-type GetTweetsWithLikesRow struct {
-	ID        int32            `json:"id"`
-	UserID    int32            `json:"user_id"`
-	Content   string           `json:"content"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	LikeCount int64            `json:"like_count"`
-	IsLiked   bool             `json:"is_liked"`
-}
-
-func (q *Queries) GetTweetsWithLikes(ctx context.Context, arg GetTweetsWithLikesParams) ([]GetTweetsWithLikesRow, error) {
-	rows, err := q.db.Query(ctx, getTweetsWithLikes, arg.UserID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTweetsWithLikesRow
-	for rows.Next() {
-		var i GetTweetsWithLikesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Content,
-			&i.CreatedAt,
-			&i.LikeCount,
-			&i.IsLiked,
 		); err != nil {
 			return nil, err
 		}

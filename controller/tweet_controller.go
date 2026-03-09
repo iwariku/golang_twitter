@@ -61,7 +61,11 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	tweetRes := FormatTweetResponse(tweet)
+	tweetRes := TweetResponse{
+		ID:      tweet.ID,
+		UserID:  tweet.UserID,
+		Content: tweet.Content,
+	}
 
 	c.JSON(http.StatusCreated, tweetRes)
 }
@@ -215,7 +219,7 @@ func (tc *TweetController) DeleteLike(c *gin.Context) {
 		}
 	}
 
-	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+	dbTweets, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     tweetId,
 	})
@@ -259,7 +263,7 @@ func (tc *TweetController) CreateLike(c *gin.Context) {
 	}
 
 	if hasLiked == false {
-		_, err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
+		err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
 			UserID:  loggedUserId,
 			TweetID: tweetId,
 		})
@@ -270,7 +274,7 @@ func (tc *TweetController) CreateLike(c *gin.Context) {
 		}
 	}
 
-	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+	dbTweets, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     tweetId,
 	})
@@ -371,9 +375,8 @@ func (tc *TweetController) CreateRetweet(c *gin.Context) {
 		return
 	}
 
-	// 値を受け取らないならsqlcを :oneから :execに変更してもいいんじゃない
 	if hasRetweeted == false {
-		_, err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
+		err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
 			UserID:  loggedUserId,
 			TweetID: targetTweetId,
 		})
@@ -626,12 +629,12 @@ func (tc *TweetController) GetBookmarkedTweetsByUserID(c *gin.Context) {
 		}
 	}
 
-	bookmarkedTweetRes := BookmarkedTweetResponse{
-		Tweets: tweetRes,
-	}
-
 	type BookmarkedTweetResponse struct {
 		Tweets []TweetResponse `json:"tweets"`
+	}
+
+	bookmarkedTweetRes := BookmarkedTweetResponse{
+		Tweets: tweetRes,
 	}
 
 	c.JSON(http.StatusOK, bookmarkedTweetRes)
