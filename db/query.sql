@@ -242,6 +242,7 @@ SELECT
   u.id,
   u.user_name,
   u.nick_name,
+  u.self_introduction,
   u.profile_image,
   EXISTS (
     SELECT 1
@@ -261,6 +262,7 @@ SELECT
   u.id,
   u.user_name,
   u.nick_name,
+  u.self_introduction,
   u.profile_image,
   EXISTS (
     SELECT 1

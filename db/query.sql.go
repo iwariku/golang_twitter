@@ -358,6 +358,7 @@ SELECT
   u.id,
   u.user_name,
   u.nick_name,
+  u.self_introduction,
   u.profile_image,
   EXISTS (
     SELECT 1
@@ -379,11 +380,12 @@ type GetFollowersParams struct {
 }
 
 type GetFollowersRow struct {
-	ID           int32       `json:"id"`
-	UserName     pgtype.Text `json:"user_name"`
-	NickName     pgtype.Text `json:"nick_name"`
-	ProfileImage pgtype.Text `json:"profile_image"`
-	IsFollowed   bool        `json:"is_followed"`
+	ID               int32       `json:"id"`
+	UserName         pgtype.Text `json:"user_name"`
+	NickName         pgtype.Text `json:"nick_name"`
+	SelfIntroduction pgtype.Text `json:"self_introduction"`
+	ProfileImage     pgtype.Text `json:"profile_image"`
+	IsFollowed       bool        `json:"is_followed"`
 }
 
 // フォロワー一覧
@@ -405,6 +407,7 @@ func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]G
 			&i.ID,
 			&i.UserName,
 			&i.NickName,
+			&i.SelfIntroduction,
 			&i.ProfileImage,
 			&i.IsFollowed,
 		); err != nil {
@@ -423,6 +426,7 @@ SELECT
   u.id,
   u.user_name,
   u.nick_name,
+  u.self_introduction,
   u.profile_image,
   EXISTS (
     SELECT 1
@@ -444,11 +448,12 @@ type GetFollowingsParams struct {
 }
 
 type GetFollowingsRow struct {
-	ID           int32       `json:"id"`
-	UserName     pgtype.Text `json:"user_name"`
-	NickName     pgtype.Text `json:"nick_name"`
-	ProfileImage pgtype.Text `json:"profile_image"`
-	IsFollowed   bool        `json:"is_followed"`
+	ID               int32       `json:"id"`
+	UserName         pgtype.Text `json:"user_name"`
+	NickName         pgtype.Text `json:"nick_name"`
+	SelfIntroduction pgtype.Text `json:"self_introduction"`
+	ProfileImage     pgtype.Text `json:"profile_image"`
+	IsFollowed       bool        `json:"is_followed"`
 }
 
 // フォロー一覧で閲覧
@@ -470,6 +475,7 @@ func (q *Queries) GetFollowings(ctx context.Context, arg GetFollowingsParams) ([
 			&i.ID,
 			&i.UserName,
 			&i.NickName,
+			&i.SelfIntroduction,
 			&i.ProfileImage,
 			&i.IsFollowed,
 		); err != nil {
