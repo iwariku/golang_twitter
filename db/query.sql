@@ -236,6 +236,11 @@ SELECT EXISTS (
   WHERE follower_id = $1 AND following_id = $2
 );
 
+-- name: GetFollowingCount :one
+SELECT COUNT(*)
+FROM follows
+WHERE follower_id = $1;
+
 -- フォロー一覧で閲覧
 -- name: GetFollowings :many
 SELECT
@@ -255,6 +260,10 @@ WHERE f.follower_id = $2
 ORDER BY f.created_at DESC
 LIMIT $3 OFFSET $4;
 
+-- name: GetFollowerCount :one
+SELECT COUNT(*)
+FROM follows
+WHERE following_id = $1;
 
 --  フォロワー一覧
 -- name: GetFollowers :many

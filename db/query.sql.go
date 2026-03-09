@@ -436,6 +436,19 @@ func (q *Queries) GetFollowExists(ctx context.Context, arg GetFollowExistsParams
 	return exists, err
 }
 
+const getFollowerCount = `-- name: GetFollowerCount :one
+SELECT COUNT(*)
+FROM follows
+WHERE following_id = $1
+`
+
+func (q *Queries) GetFollowerCount(ctx context.Context, followingID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getFollowerCount, followingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getFollowers = `-- name: GetFollowers :many
 SELECT
   u.id,
@@ -502,6 +515,19 @@ func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]G
 		return nil, err
 	}
 	return items, nil
+}
+
+const getFollowingCount = `-- name: GetFollowingCount :one
+SELECT COUNT(*)
+FROM follows
+WHERE follower_id = $1
+`
+
+func (q *Queries) GetFollowingCount(ctx context.Context, followerID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getFollowingCount, followerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getFollowings = `-- name: GetFollowings :many
