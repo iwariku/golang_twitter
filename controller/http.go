@@ -64,3 +64,9 @@ type TouchActionBookmarkResponse struct {
 	TweetID      int32 `json:"tweet_id"`
 	IsBookmarked bool  `json:"is_bookmarked"`
 }
+
+type FollowResponse struct {
+	FollowerID  int32 `json:"follower_id"`  // 誰が
+	FollowingID int32 `json:"following_id"` // 誰を
+	IsFollowed  bool  `json:"is_followed"`  // フォローしているか？true/false
+}

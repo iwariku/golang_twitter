@@ -252,3 +252,101 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 	})
 
 }
+
+// フォロー解除
+// ログインしているユーザーの情報が必要
+// 指定のユーザーの情報が必要、utils.paramintを使用
+// レコードがあるかを確認
+// レコードを削除
+func (uc *UserController) DeleteFollow(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が正しくありません"})
+		return
+	}
+
+	hasFollow, err := uc.Queries.GetFollowExists(c.Request.Context(), db.GetFollowExistsParams{
+		// FollowerIDとは、指定のユーザーのフォロワーであるという意味。すなわち、ログインユーザーのこと
+		// FollowingIDとは、フォローしている指定のユーザーのこと
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがありませんでした"})
+		return
+	}
+
+	if hasFollow {
+		err := uc.Queries.DeleteFollow(c.Request.Context(), db.DeleteFollowParams{
+			FollowerID:  loggedUserId,
+			FollowingID: targetUserId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "フォローの解除に失敗しました"})
+			return
+		}
+	}
+
+	// IsFollowed:  falseでfalseだと固定値になるかな
+	// DeleteFollowを:execから :oneにする？
+	followRes := FollowResponse{
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+		IsFollowed:  false,
+	}
+	c.JSON(http.StatusOK, followRes)
+}
+
+// フォローアクション
+// フォロー解除と似ている
+func (uc *UserController) CreateFollow(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が正しくありません"})
+		return
+	}
+
+	hasFollow, err := uc.Queries.GetFollowExists(c.Request.Context(), db.GetFollowExistsParams{
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがありませんでした"})
+		return
+	}
+
+	if hasFollow == false {
+		err := uc.Queries.CreateFollow(c.Request.Context(), db.CreateFollowParams{
+			FollowerID:  loggedUserId,
+			FollowingID: targetUserId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "フォローに失敗しました"})
+			return
+		}
+	}
+
+	followRes := FollowResponse{
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+		IsFollowed:  true,
+	}
+
+	c.JSON(http.StatusOK, followRes)
+}
