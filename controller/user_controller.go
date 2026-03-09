@@ -398,6 +398,7 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 		Limit:        limit,
 		Offset:       offset,
 	})
+	// エラーハンドリング追加
 
 	// フォロー一覧の時にデータで表示するレスポンス
 	type FollowListResponse struct {
@@ -420,6 +421,88 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 	}
 
 	// ページネーション付きのレスポンス
+	type PaginatedFollowListResponse struct {
+		FollowList []FollowListResponse `json:"follow_list"`
+		Limit      int32                `json:"limit"`
+		Offset     int32                `json:"offset"`
+		Count      int64                `json:"count"`
+	}
+
+	paginatedFollowListRes := PaginatedFollowListResponse{
+		FollowList: followListRes,
+		Limit:      limit,
+		Offset:     offset,
+		Count:      totalCount,
+	}
+
+	c.JSON(http.StatusOK, paginatedFollowListRes)
+}
+
+// フォロワー一覧
+func (uc *UserController) GetFollowers(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が違います"})
+		return
+	}
+
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+		return
+	}
+
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+		return
+	}
+
+	totalCount, err := uc.Queries.GetFollowerCount(c.Request.Context(), targetUserId)
+	if err != nil {
+		log.Printf("件数の取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
+	}
+
+	dbFollowerList, err := uc.Queries.GetFollowers(c.Request.Context(), db.GetFollowersParams{
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+		Limit:       limit,
+		Offset:      offset,
+	})
+	if err != nil {
+		log.Printf("フォロワーの取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "フォロワーの取得に失敗しました"})
+		return
+	}
+
+	type FollowListResponse struct {
+		ID               int32  `json:"id"`
+		UserName         string `json:"user_name"`
+		NickName         string `json:"nick_name"`
+		SelfIntroduction string `json:"self_introduction"`
+		ProfileImage     string `json:"profile_image"`
+	}
+
+	followListRes := make([]FollowListResponse, len(dbFollowerList))
+	for i, f := range dbFollowerList {
+		followListRes[i] = FollowListResponse{
+			ID:               f.ID,
+			UserName:         f.UserName.String,
+			NickName:         f.NickName.String,
+			SelfIntroduction: f.SelfIntroduction.String,
+			ProfileImage:     f.ProfileImage.String,
+		}
+	}
+
 	type PaginatedFollowListResponse struct {
 		FollowList []FollowListResponse `json:"follow_list"`
 		Limit      int32                `json:"limit"`

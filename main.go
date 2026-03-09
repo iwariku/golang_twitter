@@ -90,6 +90,7 @@ func main() {
 		authGroup.DELETE("/api/follow-users/:id/follow", uc.DeleteFollow)
 
 		authGroup.GET("/api/users/:id/followings", uc.GetFollowings)
+		authGroup.GET("/api/users/:id/followers", uc.GetFollowers)
 	}
 
 	r.Run()
