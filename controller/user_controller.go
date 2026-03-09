@@ -350,3 +350,89 @@ func (uc *UserController) CreateFollow(c *gin.Context) {
 
 	c.JSON(http.StatusOK, followRes)
 }
+
+// フォロー一覧(following)
+func (uc *UserController) GetFollowings(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が違います"})
+		return
+	}
+
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+		return
+	}
+
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+		return
+	}
+
+	// 件数を取得するためのSQLを作成する必要がある
+	// フォローとフォロワー用で別々で
+	totalCount, err := uc.Queries.GetFollowingCount(c.Request.Context(), targetUserId)
+	if err != nil {
+		log.Printf("件数の取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
+	}
+
+	// 自分のみのフォロー一覧とする
+	// User詳細画面に作成する場合であればtargetUserIdとしてパスに埋め込めるか
+	// 名前被り嫌だな -> それもtargetUserIdで解決できると思う
+
+	// 件数取得のSQLと＄1、＄2の部分のSQLを変更しないといけない
+	dbFollowingList, err := uc.Queries.GetFollowings(c.Request.Context(), db.GetFollowingsParams{
+		FollowerID:   loggedUserId,
+		FollowerID_2: targetUserId,
+		Limit:        limit,
+		Offset:       offset,
+	})
+
+	// フォロー一覧の時にデータで表示するレスポンス
+	type FollowListResponse struct {
+		ID               int32  `json:"id"`
+		UserName         string `json:"user_name"`
+		NickName         string `json:"nick_name"`
+		SelfIntroduction string `json:"self_introduction"`
+		ProfileImage     string `json:"profile_image"`
+	}
+
+	followListRes := make([]FollowListResponse, len(dbFollowingList))
+	for i, f := range dbFollowingList {
+		followListRes[i] = FollowListResponse{
+			ID:               f.ID,
+			UserName:         f.UserName.String,
+			NickName:         f.NickName.String,
+			SelfIntroduction: f.SelfIntroduction.String,
+			ProfileImage:     f.ProfileImage.String,
+		}
+	}
+
+	// ページネーション付きのレスポンス
+	type PaginatedFollowListResponse struct {
+		FollowList []FollowListResponse `json:"follow_list"`
+		Limit      int32                `json:"limit"`
+		Offset     int32                `json:"offset"`
+		Count      int64                `json:"count"`
+	}
+
+	paginatedFollowListRes := PaginatedFollowListResponse{
+		FollowList: followListRes,
+		Limit:      limit,
+		Offset:     offset,
+		Count:      totalCount,
+	}
+
+	c.JSON(http.StatusOK, paginatedFollowListRes)
+}

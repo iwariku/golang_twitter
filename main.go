@@ -88,6 +88,8 @@ func main() {
 		authGroup.DELETE("/api/tweets/:id/bookmark", tc.DeleteBookmark)
 		authGroup.POST("/api/follow-users/:id/follow", uc.CreateFollow)
 		authGroup.DELETE("/api/follow-users/:id/follow", uc.DeleteFollow)
+
+		authGroup.GET("/api/users/:id/followings", uc.GetFollowings)
 	}
 
 	r.Run()
