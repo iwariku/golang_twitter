@@ -61,15 +61,19 @@ func (tc *TweetController) TweetPost(c *gin.Context) {
 		return
 	}
 
-	tweetRes := FormatTweetResponse(tweet)
+	tweetRes := TweetResponse{
+		ID:      tweet.ID,
+		UserID:  tweet.UserID,
+		Content: tweet.Content,
+	}
 
 	c.JSON(http.StatusCreated, tweetRes)
 }
 
 // ===================
-// いいね、リツイート付きツイート一覧機能
+// ツイート一覧機能
 // ===================
-func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
+func (tc *TweetController) GetTweets(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
@@ -96,7 +100,7 @@ func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
 		return
 	}
 
-	dbTweets, err := tc.Queries.GetTweetsWithLikesWithRetweets(c.Request.Context(), db.GetTweetsWithLikesWithRetweetsParams{
+	dbTweets, err := tc.Queries.GetTweets(c.Request.Context(), db.GetTweetsParams{
 		UserID: loggedUserId,
 		Limit:  limit,
 		Offset: offset,
@@ -116,6 +120,7 @@ func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
 			IsLiked:      t.IsLiked,
 			RetweetCount: t.RetweetCount,
 			IsRetweeted:  t.IsRetweeted,
+			IsBookmarked: t.IsBookmarked,
 		}
 	}
 
@@ -130,9 +135,9 @@ func (tc *TweetController) GetTweetsWithLikesWithRetweets(c *gin.Context) {
 }
 
 // ===================
-// いいね、リツイート付きツイート詳細機能
+// ツイート詳細機能
 // ===================
-func (tc *TweetController) GetTweetWithLikesWithRetweets(c *gin.Context) {
+func (tc *TweetController) GetTweet(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
@@ -147,7 +152,7 @@ func (tc *TweetController) GetTweetWithLikesWithRetweets(c *gin.Context) {
 		return
 	}
 
-	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+	dbTweet, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
@@ -165,6 +170,7 @@ func (tc *TweetController) GetTweetWithLikesWithRetweets(c *gin.Context) {
 		IsLiked:      dbTweet.IsLiked,
 		RetweetCount: dbTweet.RetweetCount,
 		IsRetweeted:  dbTweet.IsRetweeted,
+		IsBookmarked: dbTweet.IsBookmarked,
 	}
 
 	c.JSON(http.StatusOK, tweetRes)
@@ -213,7 +219,7 @@ func (tc *TweetController) DeleteLike(c *gin.Context) {
 		}
 	}
 
-	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+	dbTweets, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     tweetId,
 	})
@@ -257,7 +263,7 @@ func (tc *TweetController) CreateLike(c *gin.Context) {
 	}
 
 	if hasLiked == false {
-		_, err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
+		err := tc.Queries.CreateLike(c.Request.Context(), db.CreateLikeParams{
 			UserID:  loggedUserId,
 			TweetID: tweetId,
 		})
@@ -268,7 +274,7 @@ func (tc *TweetController) CreateLike(c *gin.Context) {
 		}
 	}
 
-	dbTweets, err := tc.Queries.GetTweetWithLikes(c.Request.Context(), db.GetTweetWithLikesParams{
+	dbTweets, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     tweetId,
 	})
@@ -329,7 +335,7 @@ func (tc *TweetController) DeleteRetweet(c *gin.Context) {
 		}
 	}
 
-	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+	dbTweet, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
@@ -369,9 +375,8 @@ func (tc *TweetController) CreateRetweet(c *gin.Context) {
 		return
 	}
 
-	// 値を受け取らないならsqlcを :oneから :execに変更してもいいんじゃない
 	if hasRetweeted == false {
-		_, err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
+		err := tc.Queries.CreateRetweet(c.Request.Context(), db.CreateRetweetParams{
 			UserID:  loggedUserId,
 			TweetID: targetTweetId,
 		})
@@ -382,7 +387,7 @@ func (tc *TweetController) CreateRetweet(c *gin.Context) {
 		}
 	}
 
-	dbTweet, err := tc.Queries.GetTweetWithLikesWithRetweets(c.Request.Context(), db.GetTweetWithLikesWithRetweetsParams{
+	dbTweet, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
 		UserID: loggedUserId,
 		ID:     targetTweetId,
 	})
@@ -398,6 +403,110 @@ func (tc *TweetController) CreateRetweet(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, touchActionRetweetRes)
+}
+
+// ブックマーク削除
+func (tc *TweetController) DeleteBookmark(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetTweetId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
+	}
+
+	hasBookmarked, err := tc.Queries.GetBookmarkExists(c.Request.Context(), db.GetBookmarkExistsParams{
+		UserID:  loggedUserId,
+		TweetID: targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "条件に合致するツイートがありません"})
+		return
+	}
+
+	if hasBookmarked {
+		err := tc.Queries.DeleteBookmark(c.Request.Context(), db.DeleteBookmarkParams{
+			UserID:  loggedUserId,
+			TweetID: targetTweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ブックマークの削除に失敗しました"})
+			return
+		}
+	}
+
+	dbTweet, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
+		UserID: loggedUserId,
+		ID:     targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	touchActionBookmarkRes := TouchActionBookmarkResponse{
+		TweetID:      targetTweetId,
+		IsBookmarked: dbTweet.IsBookmarked,
+	}
+
+	c.JSON(http.StatusOK, touchActionBookmarkRes)
+}
+
+// ブックマーク登録
+func (tc *TweetController) CreateBookmark(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetTweetId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tweet_idの形式が正しくありません"})
+		return
+	}
+
+	hasBookmarked, err := tc.Queries.GetBookmarkExists(c.Request.Context(), db.GetBookmarkExistsParams{
+		UserID:  loggedUserId,
+		TweetID: targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "条件に合致するツイートがありません"})
+		return
+	}
+
+	if hasBookmarked == false {
+		err := tc.Queries.CreateBookmark(c.Request.Context(), db.CreateBookmarkParams{
+			UserID:  loggedUserId,
+			TweetID: targetTweetId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ブックマークの登録に失敗しました"})
+			return
+		}
+	}
+
+	dbTweet, err := tc.Queries.GetTweet(c.Request.Context(), db.GetTweetParams{
+		UserID: loggedUserId,
+		ID:     targetTweetId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	touchActionBookmarkRes := TouchActionBookmarkResponse{
+		TweetID:      targetTweetId,
+		IsBookmarked: dbTweet.IsBookmarked,
+	}
+
+	c.JSON(http.StatusOK, touchActionBookmarkRes)
 }
 
 // 選択したユーザーがどのツイートをリツイートしているのかを見る
@@ -461,6 +570,7 @@ func (tc *TweetController) GetRetweetedTweetsByUserID(c *gin.Context) {
 			IsLiked:      t.IsLiked,
 			RetweetCount: t.RetweetCount,
 			IsRetweeted:  t.IsRetweeted,
+			IsBookmarked: t.IsBookmarked,
 		}
 	}
 
@@ -472,4 +582,61 @@ func (tc *TweetController) GetRetweetedTweetsByUserID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, paginatedTweetsRes)
+}
+
+// ログインしているユーザーのブックマークしたツイート一覧
+func (tc *TweetController) GetBookmarkedTweetsByUserID(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が違います"})
+		return
+	}
+
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が違います"})
+		return
+	}
+
+	dbTweets, err := tc.Queries.GetBookmarkedTweetsByUserID(c.Request.Context(), db.GetBookmarkedTweetsByUserIDParams{
+		UserID: loggedUserId,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBからの取得に失敗しました"})
+		return
+	}
+
+	tweetRes := make([]TweetResponse, len(dbTweets))
+	for i, t := range dbTweets {
+		tweetRes[i] = TweetResponse{
+			ID:           t.ID,
+			UserID:       t.UserID,
+			Content:      t.Content,
+			LikeCount:    t.LikeCount,
+			IsLiked:      t.IsLiked,
+			RetweetCount: t.RetweetCount,
+			IsRetweeted:  t.IsRetweeted,
+			IsBookmarked: t.IsBookmarked,
+		}
+	}
+
+	type BookmarkedTweetResponse struct {
+		Tweets []TweetResponse `json:"tweets"`
+	}
+
+	bookmarkedTweetRes := BookmarkedTweetResponse{
+		Tweets: tweetRes,
+	}
+
+	c.JSON(http.StatusOK, bookmarkedTweetRes)
+
 }

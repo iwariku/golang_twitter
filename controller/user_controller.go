@@ -66,7 +66,7 @@ func (uc *UserController) SignUp(c *gin.Context) {
 		return
 	}
 
-	user, err := uc.Queries.CreateUser(c.Request.Context(), db.CreateUserParams{
+	dbUser, err := uc.Queries.CreateUser(c.Request.Context(), db.CreateUserParams{
 		Email:           req.Email,
 		Password:        string(hashedPassword),
 		IsActive:        pgtype.Bool{Bool: false, Valid: true},
@@ -78,14 +78,14 @@ func (uc *UserController) SignUp(c *gin.Context) {
 		return
 	}
 
-	err = uc.Mailer.SendActivationEmail(user.Email, token)
+	err = uc.Mailer.SendActivationEmail(dbUser.Email, token)
 	if err != nil {
 		log.Printf("メールの送信に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "メールの送信に失敗しました"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, user)
+	c.JSON(http.StatusCreated, dbUser)
 }
 
 func (uc *UserController) Activate(c *gin.Context) {
@@ -115,20 +115,20 @@ func (uc *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := uc.Queries.GetUserByEmail(c, req.Email)
+	dbUser, err := uc.Queries.GetUserByEmail(c, req.Email)
 	if err != nil {
 		log.Printf("ログイン失敗(ユーザーまたはパスワードが正しくありません): %v", err)
 		c.JSON(http.StatusUnauthorized, loginError)
 		return
 	}
 
-	if !user.IsActive.Bool {
+	if !dbUser.IsActive.Bool {
 		log.Printf("アカウントが有効化されていません")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "アカウントが有効化されていません"})
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password))
 	if err != nil {
 		log.Printf("ログイン失敗(ユーザーまたはパスワードが正しくありません): %v", err)
 		c.JSON(http.StatusUnauthorized, loginError)
@@ -136,7 +136,7 @@ func (uc *UserController) Login(c *gin.Context) {
 	}
 
 	sessionID := uuid.New().String()
-	err = uc.Redis.Set(c, sessionID, strconv.Itoa(int(user.ID)), 24*time.Hour).Err()
+	err = uc.Redis.Set(c, sessionID, strconv.Itoa(int(dbUser.ID)), 24*time.Hour).Err()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "セッションの作成に失敗しました"})
 		return
@@ -157,14 +157,14 @@ func (uc *UserController) Login(c *gin.Context) {
 // c: json形式で返却
 // v: 画面に表示
 func (uc *UserController) GetUser(c *gin.Context) {
-	id, err := utils.ParseParamInt32(c, "id")
+	targetUserId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
 		return
 	}
 
-	user, err := uc.Queries.GetUser(c.Request.Context(), id)
+	dbUser, err := uc.Queries.GetUser(c.Request.Context(), targetUserId)
 	if err != nil {
 		log.Printf("DBからの取得に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBからの取得に失敗しました"})
@@ -172,10 +172,10 @@ func (uc *UserController) GetUser(c *gin.Context) {
 	}
 
 	UserRes := UserResponse{
-		UserName:         user.UserName.String,
-		SelfIntroduction: user.SelfIntroduction.String,
-		DateOfBirth:      user.DateOfBirth.Time,
-		ProfileImage:     user.ProfileImage.String,
+		UserName:         dbUser.UserName.String,
+		SelfIntroduction: dbUser.SelfIntroduction.String,
+		DateOfBirth:      dbUser.DateOfBirth.Time,
+		ProfileImage:     dbUser.ProfileImage.String,
 	}
 
 	c.JSON(http.StatusOK, UserRes)
@@ -184,18 +184,18 @@ func (uc *UserController) GetUser(c *gin.Context) {
 // ===================
 // いいね、リツイート付きユーザー詳細機能
 // ===================
-func (uc *UserController) GetTweetsByUserIDWithLikesWithRetweets(c *gin.Context) {
-	targetUserId, err := utils.ParseParamInt32(c, "id")
-	if err != nil {
-		log.Printf("パラメータ解析に失敗しました: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
-		return
-	}
-
+func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 	loggedUserId, err := GetUserIDFromContext(c)
 	if err != nil {
 		log.Printf("ログインチェックの失敗: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不正なリクエストです"})
 		return
 	}
 
@@ -218,7 +218,7 @@ func (uc *UserController) GetTweetsByUserIDWithLikesWithRetweets(c *gin.Context)
 		return
 	}
 
-	dbTweets, err := uc.Queries.GetTweetsByUserIDWithLikesWithRetweets(c.Request.Context(), db.GetTweetsByUserIDWithLikesWithRetweetsParams{
+	dbTweets, err := uc.Queries.GetTweetsByUserID(c.Request.Context(), db.GetTweetsByUserIDParams{
 		TargetUserID: targetUserId,
 		LoggedUserID: loggedUserId,
 		LimitVal:     limit,
@@ -240,6 +240,7 @@ func (uc *UserController) GetTweetsByUserIDWithLikesWithRetweets(c *gin.Context)
 			IsLiked:      t.IsLiked,
 			RetweetCount: t.RetweetCount,
 			IsRetweeted:  t.IsRetweeted,
+			IsBookmarked: t.IsBookmarked,
 		}
 	}
 
