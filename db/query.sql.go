@@ -22,6 +22,35 @@ func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text)
 	return err
 }
 
+const addMemberToGroup = `-- name: AddMemberToGroup :one
+INSERT INTO dm_group_members (
+  dm_group_id,
+  user_id
+) VALUES (
+  $1, $2
+)
+RETURNING id, dm_group_id, user_id, created_at
+`
+
+type AddMemberToGroupParams struct {
+	DmGroupID int32 `json:"dm_group_id"`
+	UserID    int32 `json:"user_id"`
+}
+
+// グループが作成されたら、ログインしているユーザーとグループidを使って作成されたグループに自分を入れる
+// これはdm_groupsではnameカラムしか持たず、ユーザー情報はdm_group_membersに入れるという設計にしているため
+func (q *Queries) AddMemberToGroup(ctx context.Context, arg AddMemberToGroupParams) (DmGroupMember, error) {
+	row := q.db.QueryRow(ctx, addMemberToGroup, arg.DmGroupID, arg.UserID)
+	var i DmGroupMember
+	err := row.Scan(
+		&i.ID,
+		&i.DmGroupID,
+		&i.UserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createBookmark = `-- name: CreateBookmark :exec
 INSERT INTO bookmarks (
   user_id,
@@ -40,6 +69,27 @@ type CreateBookmarkParams struct {
 func (q *Queries) CreateBookmark(ctx context.Context, arg CreateBookmarkParams) error {
 	_, err := q.db.Exec(ctx, createBookmark, arg.UserID, arg.TweetID)
 	return err
+}
+
+const createGroup = `-- name: CreateGroup :one
+INSERT INTO dm_groups (
+  name
+) VALUES (
+  $1
+)
+RETURNING id, name, created_at
+`
+
+// DM機能
+// グループ作成を実装する
+// :oneにするのはこの作成したgroupsテーブルのidを別のテーブルで使用するため。必要がない場合は:execに変更する
+// グループ作成の時にグループ名を入力するイメージ
+// 必要なデータ、誰が作ったか:user_id、グループ名:name
+func (q *Queries) CreateGroup(ctx context.Context, name string) (DmGroup, error) {
+	row := q.db.QueryRow(ctx, createGroup, name)
+	var i DmGroup
+	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	return i, err
 }
 
 const createLike = `-- name: CreateLike :exec
@@ -61,6 +111,39 @@ type CreateLikeParams struct {
 func (q *Queries) CreateLike(ctx context.Context, arg CreateLikeParams) error {
 	_, err := q.db.Exec(ctx, createLike, arg.UserID, arg.TweetID)
 	return err
+}
+
+const createMessage = `-- name: CreateMessage :one
+INSERT INTO dm_messages (
+  user_id,
+  dm_group_id,
+  message
+) VALUES (
+  $1, $2, $3
+)
+RETURNING id, dm_group_id, user_id, message, created_at
+`
+
+type CreateMessageParams struct {
+	UserID    int32  `json:"user_id"`
+	DmGroupID int32  `json:"dm_group_id"`
+	Message   string `json:"message"`
+}
+
+// グループでメッセージを投稿できるようにする
+// user_idはCookieにセットしあるsessionIDを使う
+// 必要なデータ、誰が: user_id,どこに: dm_group_id、何を: message
+func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (DmMessage, error) {
+	row := q.db.QueryRow(ctx, createMessage, arg.UserID, arg.DmGroupID, arg.Message)
+	var i DmMessage
+	err := row.Scan(
+		&i.ID,
+		&i.DmGroupID,
+		&i.UserID,
+		&i.Message,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const createRetweet = `-- name: CreateRetweet :exec
@@ -297,6 +380,45 @@ func (q *Queries) GetBookmarkedTweetsByUserID(ctx context.Context, arg GetBookma
 	return items, nil
 }
 
+const getGroups = `-- name: GetGroups :many
+SELECT
+  dm_group_members.user_id,
+  dm_group_members.dm_group_id,
+  dm_groups.name
+FROM dm_group_members
+JOIN dm_groups  ON dm_group_members.dm_group_id = dm_groups.id
+WHERE dm_group_members.user_id = $1
+`
+
+type GetGroupsRow struct {
+	UserID    int32  `json:"user_id"`
+	DmGroupID int32  `json:"dm_group_id"`
+	Name      string `json:"name"`
+}
+
+// グループの一覧を参照できるようにする
+// WHEREがないと自分の所属しているグループ以外も表示されてしまう。
+// 別名のエイリアスについて質問する
+func (q *Queries) GetGroups(ctx context.Context, userID int32) ([]GetGroupsRow, error) {
+	rows, err := q.db.Query(ctx, getGroups, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGroupsRow
+	for rows.Next() {
+		var i GetGroupsRow
+		if err := rows.Scan(&i.UserID, &i.DmGroupID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLikeExists = `-- name: GetLikeExists :one
 SELECT EXISTS (
   SELECT 1 
@@ -316,6 +438,41 @@ func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (b
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const getMessagesByGruopID = `-- name: GetMessagesByGruopID :many
+SELECT
+  user_id,
+  message
+FROM dm_messages
+WHERE dm_group_id = $1
+`
+
+type GetMessagesByGruopIDRow struct {
+	UserID  int32  `json:"user_id"`
+	Message string `json:"message"`
+}
+
+// グループ内のメッセージを参照できるようにメッセージ一覧を実装する
+// 必要なデータ、誰の:user_id、メッセージか: message どこのグループに所属しているか?: dm_group_id = $1;
+func (q *Queries) GetMessagesByGruopID(ctx context.Context, dmGroupID int32) ([]GetMessagesByGruopIDRow, error) {
+	rows, err := q.db.Query(ctx, getMessagesByGruopID, dmGroupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMessagesByGruopIDRow
+	for rows.Next() {
+		var i GetMessagesByGruopIDRow
+		if err := rows.Scan(&i.UserID, &i.Message); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getRetweetCountByUserID = `-- name: GetRetweetCountByUserID :one
