@@ -49,6 +49,7 @@ CREATE TABLE bookmarks (
   UNIQUE (user_id, tweet_id)
 );
 
+
 CREATE TABLE follows (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   follower_id INTEGER REFERENCES users(id) NOT NULL,
@@ -59,3 +60,24 @@ CREATE TABLE follows (
 
 -- フォロー/フォロワー一覧でのパフォーマンス向上のため
 CREATE INDEX idx_follow ON follows (following_id,follower_id);
+
+CREATE TABLE dm_groups (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE dm_group_members (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  dm_group_id INTEGER REFERENCES dm_groups(id) NOT NULL,
+  user_id INTEGER REFERENCES users(id) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE dm_messages (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  dm_group_id INTEGER REFERENCES dm_groups(id) NOT NULL,
+  user_id INTEGER REFERENCES users(id) NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
