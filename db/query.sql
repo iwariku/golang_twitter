@@ -304,7 +304,6 @@ INNER JOIN users u ON f.follower_id = u.id
 WHERE f.following_id = @target_user_id::int
 ORDER BY f.created_at DESC
 LIMIT @limit_val::int OFFSET @offset_val::int;
-LIMIT $3 OFFSET $4;
 
 -- DM機能
 -- グループ作成を実装する

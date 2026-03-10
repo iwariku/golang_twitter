@@ -49,6 +49,7 @@ CREATE TABLE bookmarks (
   UNIQUE (user_id, tweet_id)
 );
 
+
 CREATE TABLE follows (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   follower_id INTEGER REFERENCES users(id) NOT NULL,
