@@ -322,8 +322,8 @@ RETURNING *;
 -- これはdm_groupsではnameカラムしか持たず、ユーザー情報はdm_group_membersに入れるという設計にしているため
 -- name: AddMemberToGroup :one
 INSERT INTO dm_group_members (
-  dm_group_id,
   user_id
+  dm_group_id,
 ) VALUES (
   $1, $2
 )
