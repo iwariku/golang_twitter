@@ -31,10 +31,27 @@ RETURNING *;
 -- name: GetTweetCount :one
 SELECT COUNT(*) FROM tweets;
 
--- name: GetUser :one
+-- name: GetUserOld :one
 SELECT * 
 FROM users
 WHERE id = $1;
+
+-- 1件の取得かつ、中間テーブルが1つという理由からサブクエリの方がいい
+-- name: GetUser :one
+SELECT
+  u.user_name,
+  u.self_introduction,
+  u.date_of_birth,
+  u.profile_image,
+  (SELECT COUNT(*) FROM follows f1 WHERE f1.follower_id = u.id)  AS following_count,
+  (SELECT COUNT(*) FROM follows f2 WHERE f2.following_id = u.id) AS follower_count,
+  (EXISTS (
+    SELECT 1 
+    FROM follows f3
+    WHERE f3.follower_id = @logged_user_id::int AND f3.following_id = u.id
+  )) AS is_followed
+FROM users u
+WHERE u.id = @target_user_id;
 
 -- name: GetTweetCountByUserID :one
 SELECT COUNT(*)
@@ -241,6 +258,7 @@ SELECT COUNT(*)
 FROM follows
 WHERE follower_id = $1;
 
+-- 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。
 -- フォロー一覧で閲覧
 -- name: GetFollowings :many
 SELECT
@@ -265,6 +283,7 @@ SELECT COUNT(*)
 FROM follows
 WHERE following_id = $1;
 
+-- 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。
 --  フォロワー一覧
 -- name: GetFollowers :many
 SELECT
