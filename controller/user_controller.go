@@ -313,6 +313,7 @@ func (uc *UserController) DeleteFollow(c *gin.Context) {
 		FollowerID:  loggedUserId,
 		FollowingID: targetUserId,
 		IsFollowed:  false,
+		// IsFollowed: !hasFollow,
 	}
 	c.JSON(http.StatusOK, followRes)
 }
@@ -358,6 +359,7 @@ func (uc *UserController) CreateFollow(c *gin.Context) {
 		FollowerID:  loggedUserId,
 		FollowingID: targetUserId,
 		IsFollowed:  true,
+		// IsFollowed: hasFollow,
 	}
 
 	c.JSON(http.StatusOK, followRes)
@@ -399,11 +401,6 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 		return
 	}
 
-	// 自分のみのフォロー一覧とする
-	// User詳細画面に作成する場合であればtargetUserIdとしてパスに埋め込めるか
-	// 名前被り嫌だな -> それもtargetUserIdで解決できると思う
-
-	// 件数取得のSQLと＄1、＄2の部分のSQLを変更しないといけない
 	dbFollowingList, err := uc.Queries.GetFollowings(c.Request.Context(), db.GetFollowingsParams{
 		LoggedUserID: loggedUserId,
 		TargetUserID: targetUserId,
@@ -416,9 +413,9 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 		return
 	}
 
-	followListRes := make([]FollowListResponse, len(dbFollowingList))
+	followingListRes := make([]FollowListResponse, len(dbFollowingList))
 	for i, f := range dbFollowingList {
-		followListRes[i] = FollowListResponse{
+		followingListRes[i] = FollowListResponse{
 			ID:               f.ID,
 			UserName:         f.UserName.String,
 			NickName:         f.NickName.String,
@@ -427,14 +424,14 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 		}
 	}
 
-	paginatedFollowListRes := PaginatedFollowListResponse{
-		FollowList: followListRes,
+	paginatedFolloingListRes := PaginatedFollowListResponse{
+		FollowList: followingListRes,
 		Limit:      limit,
 		Offset:     offset,
 		Count:      totalCount,
 	}
 
-	c.JSON(http.StatusOK, paginatedFollowListRes)
+	c.JSON(http.StatusOK, paginatedFolloingListRes)
 }
 
 // フォロワー一覧
@@ -483,9 +480,9 @@ func (uc *UserController) GetFollowers(c *gin.Context) {
 		return
 	}
 
-	followListRes := make([]FollowListResponse, len(dbFollowerList))
+	followerListRes := make([]FollowListResponse, len(dbFollowerList))
 	for i, f := range dbFollowerList {
-		followListRes[i] = FollowListResponse{
+		followerListRes[i] = FollowListResponse{
 			ID:               f.ID,
 			UserName:         f.UserName.String,
 			NickName:         f.NickName.String,
@@ -494,12 +491,12 @@ func (uc *UserController) GetFollowers(c *gin.Context) {
 		}
 	}
 
-	paginatedFollowListRes := PaginatedFollowListResponse{
-		FollowList: followListRes,
+	paginatedFollowerListRes := PaginatedFollowListResponse{
+		FollowList: followerListRes,
 		Limit:      limit,
 		Offset:     offset,
 		Count:      totalCount,
 	}
 
-	c.JSON(http.StatusOK, paginatedFollowListRes)
+	c.JSON(http.StatusOK, paginatedFollowerListRes)
 }
