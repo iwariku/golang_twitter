@@ -459,20 +459,20 @@ SELECT
   EXISTS (
     SELECT 1
     FROM follows check_f
-    WHERE check_f.follower_id = $1 AND check_f.following_id = u.id
+    WHERE check_f.follower_id = $1::int AND check_f.following_id = u.id
   ) AS is_followed
 FROM follows f
 INNER JOIN users u ON f.follower_id = u.id
-WHERE f.following_id = $2
+WHERE f.following_id = $2::int
 ORDER BY f.created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $4::int OFFSET $3::int
 `
 
 type GetFollowersParams struct {
-	FollowerID  int32 `json:"follower_id"`
-	FollowingID int32 `json:"following_id"`
-	Limit       int32 `json:"limit"`
-	Offset      int32 `json:"offset"`
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
 }
 
 type GetFollowersRow struct {
@@ -489,10 +489,10 @@ type GetFollowersRow struct {
 //	フォロワー一覧
 func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]GetFollowersRow, error) {
 	rows, err := q.db.Query(ctx, getFollowers,
-		arg.FollowerID,
-		arg.FollowingID,
-		arg.Limit,
-		arg.Offset,
+		arg.LoggedUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
 	)
 	if err != nil {
 		return nil, err
@@ -542,20 +542,20 @@ SELECT
   EXISTS (
     SELECT 1
     FROM follows check_f
-    WHERE check_f.follower_id = $1 AND check_f.following_id = u.id
+    WHERE check_f.follower_id = $1::int AND check_f.following_id = u.id
   ) AS is_followed
 FROM follows f
 INNER JOIN users u ON f.following_id = u.id
-WHERE f.follower_id = $2
+WHERE f.follower_id = $2::int
 ORDER BY f.created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $4::int OFFSET $3::int
 `
 
 type GetFollowingsParams struct {
-	FollowerID   int32 `json:"follower_id"`
-	FollowerID_2 int32 `json:"follower_id_2"`
-	Limit        int32 `json:"limit"`
-	Offset       int32 `json:"offset"`
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
 }
 
 type GetFollowingsRow struct {
@@ -571,10 +571,10 @@ type GetFollowingsRow struct {
 // フォロー一覧で閲覧
 func (q *Queries) GetFollowings(ctx context.Context, arg GetFollowingsParams) ([]GetFollowingsRow, error) {
 	rows, err := q.db.Query(ctx, getFollowings,
-		arg.FollowerID,
-		arg.FollowerID_2,
-		arg.Limit,
-		arg.Offset,
+		arg.LoggedUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
 	)
 	if err != nil {
 		return nil, err

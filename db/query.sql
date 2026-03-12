@@ -270,13 +270,13 @@ SELECT
   EXISTS (
     SELECT 1
     FROM follows check_f
-    WHERE check_f.follower_id = $1 AND check_f.following_id = u.id
+    WHERE check_f.follower_id = @logged_user_id::int AND check_f.following_id = u.id
   ) AS is_followed
 FROM follows f
 INNER JOIN users u ON f.following_id = u.id
-WHERE f.follower_id = $2
+WHERE f.follower_id = @target_user_id::int
 ORDER BY f.created_at DESC
-LIMIT $3 OFFSET $4;
+LIMIT @limit_val::int OFFSET @offset_val::int;
 
 -- name: GetFollowerCount :one
 SELECT COUNT(*)
@@ -295,12 +295,13 @@ SELECT
   EXISTS (
     SELECT 1
     FROM follows check_f
-    WHERE check_f.follower_id = $1 AND check_f.following_id = u.id
+    WHERE check_f.follower_id = @logged_user_id::int AND check_f.following_id = u.id
   ) AS is_followed
 FROM follows f
 INNER JOIN users u ON f.follower_id = u.id
-WHERE f.following_id = $2
+WHERE f.following_id = @target_user_id::int
 ORDER BY f.created_at DESC
+LIMIT @limit_val::int OFFSET @offset_val::int;
 LIMIT $3 OFFSET $4;
 
 -- DM機能
