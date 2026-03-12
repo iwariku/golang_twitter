@@ -410,16 +410,6 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 		Limit:        limit,
 		Offset:       offset,
 	})
-	// エラーハンドリング追加
-
-	// フォロー一覧の時にデータで表示するレスポンス
-	type FollowListResponse struct {
-		ID               int32  `json:"id"`
-		UserName         string `json:"user_name"`
-		NickName         string `json:"nick_name"`
-		SelfIntroduction string `json:"self_introduction"`
-		ProfileImage     string `json:"profile_image"`
-	}
 
 	followListRes := make([]FollowListResponse, len(dbFollowingList))
 	for i, f := range dbFollowingList {
@@ -430,14 +420,6 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 			SelfIntroduction: f.SelfIntroduction.String,
 			ProfileImage:     f.ProfileImage.String,
 		}
-	}
-
-	// ページネーション付きのレスポンス
-	type PaginatedFollowListResponse struct {
-		FollowList []FollowListResponse `json:"follow_list"`
-		Limit      int32                `json:"limit"`
-		Offset     int32                `json:"offset"`
-		Count      int64                `json:"count"`
 	}
 
 	paginatedFollowListRes := PaginatedFollowListResponse{
@@ -496,14 +478,6 @@ func (uc *UserController) GetFollowers(c *gin.Context) {
 		return
 	}
 
-	type FollowListResponse struct {
-		ID               int32  `json:"id"`
-		UserName         string `json:"user_name"`
-		NickName         string `json:"nick_name"`
-		SelfIntroduction string `json:"self_introduction"`
-		ProfileImage     string `json:"profile_image"`
-	}
-
 	followListRes := make([]FollowListResponse, len(dbFollowerList))
 	for i, f := range dbFollowerList {
 		followListRes[i] = FollowListResponse{
@@ -513,13 +487,6 @@ func (uc *UserController) GetFollowers(c *gin.Context) {
 			SelfIntroduction: f.SelfIntroduction.String,
 			ProfileImage:     f.ProfileImage.String,
 		}
-	}
-
-	type PaginatedFollowListResponse struct {
-		FollowList []FollowListResponse `json:"follow_list"`
-		Limit      int32                `json:"limit"`
-		Offset     int32                `json:"offset"`
-		Count      int64                `json:"count"`
 	}
 
 	paginatedFollowListRes := PaginatedFollowListResponse{
