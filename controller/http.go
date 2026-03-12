@@ -17,6 +17,9 @@ type UserResponse struct {
 	SelfIntroduction string    `json:"self_introduction"`
 	DateOfBirth      time.Time `json:"date_of_birth"`
 	ProfileImage     string    `json:"profile_image"`
+	FollowingCount   int64     `json:"following_count"`
+	FollowerCount    int64     `json:"follower_count"`
+	IsFollowed       bool      `json:"is_followed"`
 }
 
 // tweet
