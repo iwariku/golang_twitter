@@ -90,7 +90,14 @@ func main() {
 		authGroup.POST("/api/users/:id/follow", uc.CreateFollow)
 		authGroup.DELETE("/api/users/:id/follow", uc.DeleteFollow)
 
+		authGroup.GET("/users/:id/followings", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "follows.html", nil)
+		})
 		authGroup.GET("/api/users/:id/followings", uc.GetFollowings)
+
+		authGroup.GET("/users/:id/followers", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "follows.html", nil)
+		})
 		authGroup.GET("/api/users/:id/followers", uc.GetFollowers)
 	}
 

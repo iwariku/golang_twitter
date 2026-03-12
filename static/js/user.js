@@ -62,11 +62,11 @@ const setupUserInfo = (data) => {
           </div>
 
           <div class="mt-3 flex gap-4 text-sm">
-            <a href="/" class="hover:underline">
+            <a href="#" class="hover:underline">
               <span id="js-following-count" class="font-bold text-black">${data.following_count}</span>
               <span class="text-gray-500 font-normal">フォロー中</span>
             </a>
-            <a href="/" class="hover:underline">
+            <a href="#" class="hover:underline">
               <span id="js-follower-count" class="font-bold text-black">${data.follower_count}</span>
               <span class="text-gray-500 font-normal">フォロワー</span>
             </a>
