@@ -405,10 +405,10 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 
 	// 件数取得のSQLと＄1、＄2の部分のSQLを変更しないといけない
 	dbFollowingList, err := uc.Queries.GetFollowings(c.Request.Context(), db.GetFollowingsParams{
-		FollowerID:   loggedUserId,
-		FollowerID_2: targetUserId,
-		Limit:        limit,
-		Offset:       offset,
+		LoggedUserID: loggedUserId,
+		TargetUserID: targetUserId,
+		LimitVal:     limit,
+		OffsetVal:    offset,
 	})
 	if err != nil {
 		log.Printf("データの取得に失敗しました: %v", err)
@@ -472,10 +472,10 @@ func (uc *UserController) GetFollowers(c *gin.Context) {
 	}
 
 	dbFollowerList, err := uc.Queries.GetFollowers(c.Request.Context(), db.GetFollowersParams{
-		FollowerID:  loggedUserId,
-		FollowingID: targetUserId,
-		Limit:       limit,
-		Offset:      offset,
+		LoggedUserID: loggedUserId,
+		TargetUserID: targetUserId,
+		LimitVal:     limit,
+		OffsetVal:    offset,
 	})
 	if err != nil {
 		log.Printf("フォロワーの取得に失敗しました")
