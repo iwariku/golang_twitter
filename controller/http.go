@@ -27,7 +27,6 @@ type TweetRequest struct {
 	Content string `json:"content" binding:"required,max=140"`
 }
 
-// 構造体の中に構造体を入れる
 type TweetResponse struct {
 	ID           int32  `json:"id"`
 	UserID       int32  `json:"user_id"`
@@ -72,4 +71,19 @@ type FollowResponse struct {
 	FollowerID  int32 `json:"follower_id"`  // 誰が
 	FollowingID int32 `json:"following_id"` // 誰を
 	IsFollowed  bool  `json:"is_followed"`  // フォローしているか？true/false
+}
+
+type FollowListResponse struct {
+	ID               int32  `json:"id"`
+	UserName         string `json:"user_name"`
+	NickName         string `json:"nick_name"`
+	SelfIntroduction string `json:"self_introduction"`
+	ProfileImage     string `json:"profile_image"`
+}
+
+type PaginatedFollowListResponse struct {
+	FollowList []FollowListResponse `json:"follow_list"`
+	Limit      int32                `json:"limit"`
+	Offset     int32                `json:"offset"`
+	Count      int64                `json:"count"`
 }
