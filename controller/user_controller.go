@@ -410,6 +410,11 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 		Limit:        limit,
 		Offset:       offset,
 	})
+	if err != nil {
+		log.Printf("データの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
 
 	followListRes := make([]FollowListResponse, len(dbFollowingList))
 	for i, f := range dbFollowingList {
