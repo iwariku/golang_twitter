@@ -22,26 +22,6 @@ func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text)
 	return err
 }
 
-const createFollow = `-- name: CreateFollow :exec
-INSERT INTO follows (
-  follower_id,
-  following_id
-) VALUES (
-  $1, $2
-)
-`
-
-type CreateFollowParams struct {
-	FollowerID  int32 `json:"follower_id"`
-	FollowingID int32 `json:"following_id"`
-}
-
-// フォロー関連
-func (q *Queries) CreateFollow(ctx context.Context, arg CreateFollowParams) error {
-	_, err := q.db.Exec(ctx, createFollow, arg.FollowerID, arg.FollowingID)
-	return err
-}
-
 const createBookmark = `-- name: CreateBookmark :exec
 INSERT INTO bookmarks (
   user_id,
@@ -59,6 +39,26 @@ type CreateBookmarkParams struct {
 
 func (q *Queries) CreateBookmark(ctx context.Context, arg CreateBookmarkParams) error {
 	_, err := q.db.Exec(ctx, createBookmark, arg.UserID, arg.TweetID)
+	return err
+}
+
+const createFollow = `-- name: CreateFollow :exec
+INSERT INTO follows (
+  follower_id,
+  following_id
+) VALUES (
+  $1, $2
+)
+`
+
+type CreateFollowParams struct {
+	FollowerID  int32 `json:"follower_id"`
+	FollowingID int32 `json:"following_id"`
+}
+
+// フォロー関連
+func (q *Queries) CreateFollow(ctx context.Context, arg CreateFollowParams) error {
+	_, err := q.db.Exec(ctx, createFollow, arg.FollowerID, arg.FollowingID)
 	return err
 }
 
@@ -401,7 +401,9 @@ type GetFollowersRow struct {
 	IsFollowed       bool        `json:"is_followed"`
 }
 
-// フォロワー一覧
+// 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。
+//
+//	フォロワー一覧
 func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]GetFollowersRow, error) {
 	rows, err := q.db.Query(ctx, getFollowers,
 		arg.FollowerID,
@@ -482,6 +484,7 @@ type GetFollowingsRow struct {
 	IsFollowed       bool        `json:"is_followed"`
 }
 
+// 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。
 // フォロー一覧で閲覧
 func (q *Queries) GetFollowings(ctx context.Context, arg GetFollowingsParams) ([]GetFollowingsRow, error) {
 	rows, err := q.db.Query(ctx, getFollowings,
@@ -870,32 +873,49 @@ func (q *Queries) GetTweetsByUserID(ctx context.Context, arg GetTweetsByUserIDPa
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, is_active, activation_token, activated_at, created_at, updated_at 
-FROM users
-WHERE id = $1
+SELECT
+  u.user_name,
+  u.self_introduction,
+  u.date_of_birth,
+  u.profile_image,
+  (SELECT COUNT(*) FROM follows f1 WHERE f1.follower_id = u.id)  AS following_count,
+  (SELECT COUNT(*) FROM follows f2 WHERE f2.following_id = u.id) AS follower_count,
+  (EXISTS (
+    SELECT 1 
+    FROM follows f3
+    WHERE f3.follower_id = $1::int AND f3.following_id = u.id
+  )) AS is_followed
+FROM users u
+WHERE u.id = $2
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, id)
-	var i User
+type GetUserParams struct {
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+}
+
+type GetUserRow struct {
+	UserName         pgtype.Text `json:"user_name"`
+	SelfIntroduction pgtype.Text `json:"self_introduction"`
+	DateOfBirth      pgtype.Date `json:"date_of_birth"`
+	ProfileImage     pgtype.Text `json:"profile_image"`
+	FollowingCount   int64       `json:"following_count"`
+	FollowerCount    int64       `json:"follower_count"`
+	IsFollowed       bool        `json:"is_followed"`
+}
+
+// 1件の取得かつ、中間テーブルが1つという理由からサブクエリの方がいい
+func (q *Queries) GetUser(ctx context.Context, arg GetUserParams) (GetUserRow, error) {
+	row := q.db.QueryRow(ctx, getUser, arg.LoggedUserID, arg.TargetUserID)
+	var i GetUserRow
 	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Password,
 		&i.UserName,
-		&i.PhoneNumber,
-		&i.NickName,
 		&i.SelfIntroduction,
-		&i.Place,
-		&i.WebSite,
 		&i.DateOfBirth,
 		&i.ProfileImage,
-		&i.AvatarImage,
-		&i.IsActive,
-		&i.ActivationToken,
-		&i.ActivatedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.FollowingCount,
+		&i.FollowerCount,
+		&i.IsFollowed,
 	)
 	return i, err
 }
@@ -921,6 +941,37 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Email,
 		&i.Password,
 		&i.IsActive,
+	)
+	return i, err
+}
+
+const getUserOld = `-- name: GetUserOld :one
+SELECT id, email, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, is_active, activation_token, activated_at, created_at, updated_at 
+FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetUserOld(ctx context.Context, id int32) (User, error) {
+	row := q.db.QueryRow(ctx, getUserOld, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Password,
+		&i.UserName,
+		&i.PhoneNumber,
+		&i.NickName,
+		&i.SelfIntroduction,
+		&i.Place,
+		&i.WebSite,
+		&i.DateOfBirth,
+		&i.ProfileImage,
+		&i.AvatarImage,
+		&i.IsActive,
+		&i.ActivationToken,
+		&i.ActivatedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
