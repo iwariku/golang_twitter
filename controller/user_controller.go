@@ -307,13 +307,10 @@ func (uc *UserController) DeleteFollow(c *gin.Context) {
 		}
 	}
 
-	// IsFollowed:  falseでfalseだと固定値になるかな
-	// DeleteFollowを:execから :oneにする？
 	followRes := FollowResponse{
 		FollowerID:  loggedUserId,
 		FollowingID: targetUserId,
 		IsFollowed:  false,
-		// IsFollowed: !hasFollow,
 	}
 	c.JSON(http.StatusOK, followRes)
 }
@@ -359,7 +356,6 @@ func (uc *UserController) CreateFollow(c *gin.Context) {
 		FollowerID:  loggedUserId,
 		FollowingID: targetUserId,
 		IsFollowed:  true,
-		// IsFollowed: hasFollow,
 	}
 
 	c.JSON(http.StatusOK, followRes)

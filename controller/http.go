@@ -38,7 +38,6 @@ type TweetResponse struct {
 	IsBookmarked bool   `json:"is_bookmarked"`
 }
 
-// この構造体はそのままでいいんじゃない？ツイート一覧を返却するのであれば
 type PaginatedTweetsResponse struct {
 	Tweets []TweetResponse `json:"tweets"`
 	Limit  int             `json:"limit"`
