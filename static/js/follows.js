@@ -1,6 +1,6 @@
 let currentApiUrl = '';
 let currentOffset = 0;
-const LIMIT = 10;
+const LIMIT = 3;
 let totalCount = 0;
 
 /**
