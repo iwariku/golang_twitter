@@ -31,11 +31,6 @@ RETURNING *;
 -- name: GetTweetCount :one
 SELECT COUNT(*) FROM tweets;
 
--- name: GetUserOld :one
-SELECT * 
-FROM users
-WHERE id = $1;
-
 -- 1件の取得かつ、中間テーブルが1つという理由からサブクエリの方がいい
 -- name: GetUser :one
 SELECT

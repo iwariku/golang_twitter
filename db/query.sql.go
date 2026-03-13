@@ -944,34 +944,3 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 	)
 	return i, err
 }
-
-const getUserOld = `-- name: GetUserOld :one
-SELECT id, email, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, is_active, activation_token, activated_at, created_at, updated_at 
-FROM users
-WHERE id = $1
-`
-
-func (q *Queries) GetUserOld(ctx context.Context, id int32) (User, error) {
-	row := q.db.QueryRow(ctx, getUserOld, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Password,
-		&i.UserName,
-		&i.PhoneNumber,
-		&i.NickName,
-		&i.SelfIntroduction,
-		&i.Place,
-		&i.WebSite,
-		&i.DateOfBirth,
-		&i.ProfileImage,
-		&i.AvatarImage,
-		&i.IsActive,
-		&i.ActivationToken,
-		&i.ActivatedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
