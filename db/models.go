@@ -15,6 +15,27 @@ type Bookmark struct {
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
+type DmGroup struct {
+	ID        int32            `json:"id"`
+	Name      string           `json:"name"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+type DmGroupMember struct {
+	ID        int32            `json:"id"`
+	DmGroupID int32            `json:"dm_group_id"`
+	UserID    int32            `json:"user_id"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+type DmMessage struct {
+	ID        int32            `json:"id"`
+	DmGroupID int32            `json:"dm_group_id"`
+	UserID    int32            `json:"user_id"`
+	Message   string           `json:"message"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
 type Like struct {
 	ID        int32            `json:"id"`
 	UserID    int32            `json:"user_id"`
