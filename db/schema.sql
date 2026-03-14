@@ -57,6 +57,9 @@ CREATE TABLE follows (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- フォロー/フォロワー一覧でのパフォーマンス向上のため
+CREATE INDEX idx_follow ON follows (following_id,follower_id);
+
 CREATE TABLE dm_groups (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
