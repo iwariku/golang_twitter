@@ -401,9 +401,11 @@ type GetFollowersRow struct {
 	IsFollowed       bool        `json:"is_followed"`
 }
 
-// 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。
-//
 //	フォロワー一覧
+//
+// 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。(ただ今回はサブクエリ)
+// 「:many」なので、行の分だけEXISTS (...というサブクエリが実行されてしまうが、
+// 可読性を意識し、サブクエリ形式を選択。パフォーマンスの観点では複合インデックスを採用し、サブクエリでの欠点を補う
 func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]GetFollowersRow, error) {
 	rows, err := q.db.Query(ctx, getFollowers,
 		arg.LoggedUserID,
@@ -484,8 +486,10 @@ type GetFollowingsRow struct {
 	IsFollowed       bool        `json:"is_followed"`
 }
 
-// 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。
 // フォロー一覧で閲覧
+// 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。(ただ今回はサブクエリ)
+// 「:many」なので、行の分だけEXISTS (...というサブクエリが実行されてしまうが、
+// 可読性を意識し、サブクエリ形式を選択。パフォーマンスの観点では複合インデックスを採用し、サブクエリでの欠点を補う
 func (q *Queries) GetFollowings(ctx context.Context, arg GetFollowingsParams) ([]GetFollowingsRow, error) {
 	rows, err := q.db.Query(ctx, getFollowings,
 		arg.LoggedUserID,
@@ -905,6 +909,9 @@ type GetUserRow struct {
 }
 
 // 1件の取得かつ、中間テーブルが1つという理由からサブクエリの方がいい
+// (SELECT COUNT(*)...は件数(10件や20件)という1つの数値を返却するためサブクエリでも問題がない
+// (EXISTS...は「指定されたユーザーとログインユーザーの関係性をチェックする処理なため」サブクエリで書く方が可読性が高い
+// 「:one」の場合、可読性が高く、パフォーマンスへの影響も少ないことから、サブクエリ形式を選択
 func (q *Queries) GetUser(ctx context.Context, arg GetUserParams) (GetUserRow, error) {
 	row := q.db.QueryRow(ctx, getUser, arg.LoggedUserID, arg.TargetUserID)
 	var i GetUserRow
