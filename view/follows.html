@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>フォロー/フォロワー一覧</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/js/follows.js" defer></script>
+  </head>
+
+  <body class="bg-white text-gray-900">
+    <div class="max-w-[600px] mx-auto border-x border-gray-100 min-h-screen">
+      <header
+        class="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-100"
+      >
+        <div class="flex h-[53px] items-center px-4">
+          <h2 id="page-title" class="text-xl font-bold text-black"></h2>
+        </div>
+      </header>
+
+      <div id="user-list" class="flex flex-col"></div>
+
+      <footer class="flex flex-col items-center p-8 gap-4">
+        <div class="flex items-center gap-6">
+          <button
+            id="prev-btn"
+            class="px-5 py-2 rounded-full font-bold text-sm hover: bg-gray-300 disabled:opacity-30 transition"
+          >
+            前のページ
+          </button>
+          <span id="page-info" class="text-sm font-medium text-gray-500"
+            >1 / 10 ページ</span
+          >
+          <button
+            id="next-btn"
+            class="px-5 py-2 rounded-full font-bold text-sm hover: bg-gray-300 disabled:opacity-30 transition"
+          >
+            次のページ
+          </button>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -157,6 +157,12 @@ func (uc *UserController) Login(c *gin.Context) {
 // c: json形式で返却
 // v: 画面に表示
 func (uc *UserController) GetUser(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
 	targetUserId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
 		log.Printf("パラメータ解析に失敗しました: %v", err)
@@ -164,7 +170,10 @@ func (uc *UserController) GetUser(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := uc.Queries.GetUser(c.Request.Context(), targetUserId)
+	dbUser, err := uc.Queries.GetUser(c.Request.Context(), db.GetUserParams{
+		LoggedUserID: loggedUserId,
+		TargetUserID: targetUserId,
+	})
 	if err != nil {
 		log.Printf("DBからの取得に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBからの取得に失敗しました"})
@@ -176,6 +185,9 @@ func (uc *UserController) GetUser(c *gin.Context) {
 		SelfIntroduction: dbUser.SelfIntroduction.String,
 		DateOfBirth:      dbUser.DateOfBirth.Time,
 		ProfileImage:     dbUser.ProfileImage.String,
+		FollowingCount:   dbUser.FollowingCount,
+		FollowerCount:    dbUser.FollowerCount,
+		IsFollowed:       dbUser.IsFollowed,
 	}
 
 	c.JSON(http.StatusOK, UserRes)
@@ -251,4 +263,236 @@ func (uc *UserController) GetTweetsByUserID(c *gin.Context) {
 		Count:  int(totalCount),
 	})
 
+}
+
+// フォロー解除
+// ログインしているユーザーの情報が必要
+// 指定のユーザーの情報が必要、utils.paramintを使用
+// レコードがあるかを確認
+// レコードを削除
+func (uc *UserController) DeleteFollow(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が正しくありません"})
+		return
+	}
+
+	hasFollow, err := uc.Queries.GetFollowExists(c.Request.Context(), db.GetFollowExistsParams{
+		// FollowerIDとは、指定のユーザーのフォロワーであるという意味。すなわち、ログインユーザーのこと
+		// FollowingIDとは、フォローしている指定のユーザーのこと
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがありませんでした"})
+		return
+	}
+
+	if hasFollow {
+		err := uc.Queries.DeleteFollow(c.Request.Context(), db.DeleteFollowParams{
+			FollowerID:  loggedUserId,
+			FollowingID: targetUserId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "フォローの解除に失敗しました"})
+			return
+		}
+	}
+
+	followRes := FollowResponse{
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+		IsFollowed:  false,
+	}
+	c.JSON(http.StatusOK, followRes)
+}
+
+// フォローアクション
+// フォロー解除と似ている
+func (uc *UserController) CreateFollow(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が正しくありません"})
+		return
+	}
+
+	hasFollow, err := uc.Queries.GetFollowExists(c.Request.Context(), db.GetFollowExistsParams{
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するツイートがありませんでした"})
+		return
+	}
+
+	if hasFollow == false {
+		err := uc.Queries.CreateFollow(c.Request.Context(), db.CreateFollowParams{
+			FollowerID:  loggedUserId,
+			FollowingID: targetUserId,
+		})
+		if err != nil {
+			log.Printf("データの更新に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "フォローに失敗しました"})
+			return
+		}
+	}
+
+	followRes := FollowResponse{
+		FollowerID:  loggedUserId,
+		FollowingID: targetUserId,
+		IsFollowed:  true,
+	}
+
+	c.JSON(http.StatusOK, followRes)
+}
+
+// フォロー一覧(following)
+func (uc *UserController) GetFollowings(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が違います"})
+		return
+	}
+
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 3)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+		return
+	}
+
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+		return
+	}
+
+	// 件数を取得するためのSQLを作成する必要がある
+	// フォローとフォロワー用で別々で
+	totalCount, err := uc.Queries.GetFollowingCount(c.Request.Context(), targetUserId)
+	if err != nil {
+		log.Printf("件数の取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
+	}
+
+	dbFollowingList, err := uc.Queries.GetFollowings(c.Request.Context(), db.GetFollowingsParams{
+		LoggedUserID: loggedUserId,
+		TargetUserID: targetUserId,
+		LimitVal:     limit,
+		OffsetVal:    offset,
+	})
+	if err != nil {
+		log.Printf("データの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "データの取得に失敗しました"})
+		return
+	}
+
+	followingListRes := make([]FollowListResponse, len(dbFollowingList))
+	for i, f := range dbFollowingList {
+		followingListRes[i] = FollowListResponse{
+			ID:               f.ID,
+			UserName:         f.UserName.String,
+			NickName:         f.NickName.String,
+			SelfIntroduction: f.SelfIntroduction.String,
+			ProfileImage:     f.ProfileImage.String,
+		}
+	}
+
+	paginatedFolloingListRes := PaginatedFollowListResponse{
+		FollowList: followingListRes,
+		Limit:      limit,
+		Offset:     offset,
+		Count:      totalCount,
+	}
+
+	c.JSON(http.StatusOK, paginatedFolloingListRes)
+}
+
+// フォロワー一覧
+func (uc *UserController) GetFollowers(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetUserId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idの形式が違います"})
+		return
+	}
+
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 3)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
+		return
+	}
+
+	offset, err := utils.ParseQueryInt32WithDefault(c, "offset", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "offsetの形式が正しくありません"})
+		return
+	}
+
+	totalCount, err := uc.Queries.GetFollowerCount(c.Request.Context(), targetUserId)
+	if err != nil {
+		log.Printf("件数の取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
+	}
+
+	dbFollowerList, err := uc.Queries.GetFollowers(c.Request.Context(), db.GetFollowersParams{
+		LoggedUserID: loggedUserId,
+		TargetUserID: targetUserId,
+		LimitVal:     limit,
+		OffsetVal:    offset,
+	})
+	if err != nil {
+		log.Printf("フォロワーの取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "フォロワーの取得に失敗しました"})
+		return
+	}
+
+	followerListRes := make([]FollowListResponse, len(dbFollowerList))
+	for i, f := range dbFollowerList {
+		followerListRes[i] = FollowListResponse{
+			ID:               f.ID,
+			UserName:         f.UserName.String,
+			NickName:         f.NickName.String,
+			SelfIntroduction: f.SelfIntroduction.String,
+			ProfileImage:     f.ProfileImage.String,
+		}
+	}
+
+	paginatedFollowerListRes := PaginatedFollowListResponse{
+		FollowList: followerListRes,
+		Limit:      limit,
+		Offset:     offset,
+		Count:      totalCount,
+	}
+
+	c.JSON(http.StatusOK, paginatedFollowerListRes)
 }

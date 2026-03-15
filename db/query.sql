@@ -31,10 +31,25 @@ RETURNING *;
 -- name: GetTweetCount :one
 SELECT COUNT(*) FROM tweets;
 
+-- 1件の取得かつ、中間テーブルが1つという理由からサブクエリの方がいい
+-- (SELECT COUNT(*)...は件数(10件や20件)という1つの数値を返却するためサブクエリでも問題がない
+-- (EXISTS...は「指定されたユーザーとログインユーザーの関係性をチェックする処理なため」サブクエリで書く方が可読性が高い
+-- 「:one」の場合、可読性が高く、パフォーマンスへの影響も少ないことから、サブクエリ形式を選択
 -- name: GetUser :one
-SELECT * 
-FROM users
-WHERE id = $1;
+SELECT
+  u.user_name,
+  u.self_introduction,
+  u.date_of_birth,
+  u.profile_image,
+  (SELECT COUNT(*) FROM follows f1 WHERE f1.follower_id = u.id)  AS following_count,
+  (SELECT COUNT(*) FROM follows f2 WHERE f2.following_id = u.id) AS follower_count,
+  (EXISTS (
+    SELECT 1 
+    FROM follows f3
+    WHERE f3.follower_id = @logged_user_id::int AND f3.following_id = u.id
+  )) AS is_followed
+FROM users u
+WHERE u.id = @target_user_id;
 
 -- name: GetTweetCountByUserID :one
 SELECT COUNT(*)
@@ -214,3 +229,78 @@ WHERE b.user_id = $1
 GROUP BY t.id
 ORDER BY t.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- フォロー関連
+-- name: CreateFollow :exec
+INSERT INTO follows (
+  follower_id,
+  following_id
+) VALUES (
+  $1, $2
+);
+
+-- name: DeleteFollow :exec
+DELETE
+FROM follows
+WHERE follower_id = $1 AND following_id = $2;
+
+-- name: GetFollowExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM follows
+  WHERE follower_id = $1 AND following_id = $2
+);
+
+-- name: GetFollowingCount :one
+SELECT COUNT(*)
+FROM follows
+WHERE follower_id = $1;
+
+-- フォロー一覧で閲覧
+-- 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。(ただ今回はサブクエリ)
+-- 「:many」なので、行の分だけEXISTS (...というサブクエリが実行されてしまうが、
+-- 可読性を意識し、サブクエリ形式を選択。パフォーマンスの観点では複合インデックスを採用し、サブクエリでの欠点を補う
+-- name: GetFollowings :many
+SELECT
+  u.id,
+  u.user_name,
+  u.nick_name,
+  u.self_introduction,
+  u.profile_image,
+  EXISTS (
+    SELECT 1
+    FROM follows check_f
+    WHERE check_f.follower_id = @logged_user_id::int AND check_f.following_id = u.id
+  ) AS is_followed
+FROM follows f
+INNER JOIN users u ON f.following_id = u.id
+WHERE f.follower_id = @target_user_id::int
+ORDER BY f.created_at DESC
+LIMIT @limit_val::int OFFSET @offset_val::int;
+
+-- name: GetFollowerCount :one
+SELECT COUNT(*)
+FROM follows
+WHERE following_id = $1;
+
+--  フォロワー一覧
+-- 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。(ただ今回はサブクエリ)
+-- 「:many」なので、行の分だけEXISTS (...というサブクエリが実行されてしまうが、
+-- 可読性を意識し、サブクエリ形式を選択。パフォーマンスの観点では複合インデックスを採用し、サブクエリでの欠点を補う
+-- name: GetFollowers :many
+SELECT
+  u.id,
+  u.user_name,
+  u.nick_name,
+  u.self_introduction,
+  u.profile_image,
+  EXISTS (
+    SELECT 1
+    FROM follows check_f
+    WHERE check_f.follower_id = @logged_user_id::int AND check_f.following_id = u.id
+  ) AS is_followed
+FROM follows f
+INNER JOIN users u ON f.follower_id = u.id
+WHERE f.following_id = @target_user_id::int
+ORDER BY f.created_at DESC
+LIMIT @limit_val::int OFFSET @offset_val::int;

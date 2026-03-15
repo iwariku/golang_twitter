@@ -42,6 +42,26 @@ func (q *Queries) CreateBookmark(ctx context.Context, arg CreateBookmarkParams) 
 	return err
 }
 
+const createFollow = `-- name: CreateFollow :exec
+INSERT INTO follows (
+  follower_id,
+  following_id
+) VALUES (
+  $1, $2
+)
+`
+
+type CreateFollowParams struct {
+	FollowerID  int32 `json:"follower_id"`
+	FollowingID int32 `json:"following_id"`
+}
+
+// フォロー関連
+func (q *Queries) CreateFollow(ctx context.Context, arg CreateFollowParams) error {
+	_, err := q.db.Exec(ctx, createFollow, arg.FollowerID, arg.FollowingID)
+	return err
+}
+
 const createLike = `-- name: CreateLike :exec
 INSERT INTO likes (
   user_id,
@@ -175,6 +195,22 @@ func (q *Queries) DeleteBookmark(ctx context.Context, arg DeleteBookmarkParams) 
 	return err
 }
 
+const deleteFollow = `-- name: DeleteFollow :exec
+DELETE
+FROM follows
+WHERE follower_id = $1 AND following_id = $2
+`
+
+type DeleteFollowParams struct {
+	FollowerID  int32 `json:"follower_id"`
+	FollowingID int32 `json:"following_id"`
+}
+
+func (q *Queries) DeleteFollow(ctx context.Context, arg DeleteFollowParams) error {
+	_, err := q.db.Exec(ctx, deleteFollow, arg.FollowerID, arg.FollowingID)
+	return err
+}
+
 const deleteLike = `-- name: DeleteLike :exec
 DELETE 
 FROM likes
@@ -286,6 +322,195 @@ func (q *Queries) GetBookmarkedTweetsByUserID(ctx context.Context, arg GetBookma
 			&i.RetweetCount,
 			&i.IsRetweeted,
 			&i.IsBookmarked,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFollowExists = `-- name: GetFollowExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM follows
+  WHERE follower_id = $1 AND following_id = $2
+)
+`
+
+type GetFollowExistsParams struct {
+	FollowerID  int32 `json:"follower_id"`
+	FollowingID int32 `json:"following_id"`
+}
+
+func (q *Queries) GetFollowExists(ctx context.Context, arg GetFollowExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, getFollowExists, arg.FollowerID, arg.FollowingID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getFollowerCount = `-- name: GetFollowerCount :one
+SELECT COUNT(*)
+FROM follows
+WHERE following_id = $1
+`
+
+func (q *Queries) GetFollowerCount(ctx context.Context, followingID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getFollowerCount, followingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getFollowers = `-- name: GetFollowers :many
+SELECT
+  u.id,
+  u.user_name,
+  u.nick_name,
+  u.self_introduction,
+  u.profile_image,
+  EXISTS (
+    SELECT 1
+    FROM follows check_f
+    WHERE check_f.follower_id = $1::int AND check_f.following_id = u.id
+  ) AS is_followed
+FROM follows f
+INNER JOIN users u ON f.follower_id = u.id
+WHERE f.following_id = $2::int
+ORDER BY f.created_at DESC
+LIMIT $4::int OFFSET $3::int
+`
+
+type GetFollowersParams struct {
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
+}
+
+type GetFollowersRow struct {
+	ID               int32       `json:"id"`
+	UserName         pgtype.Text `json:"user_name"`
+	NickName         pgtype.Text `json:"nick_name"`
+	SelfIntroduction pgtype.Text `json:"self_introduction"`
+	ProfileImage     pgtype.Text `json:"profile_image"`
+	IsFollowed       bool        `json:"is_followed"`
+}
+
+//	フォロワー一覧
+//
+// 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。(ただ今回はサブクエリ)
+// 「:many」なので、行の分だけEXISTS (...というサブクエリが実行されてしまうが、
+// 可読性を意識し、サブクエリ形式を選択。パフォーマンスの観点では複合インデックスを採用し、サブクエリでの欠点を補う
+func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]GetFollowersRow, error) {
+	rows, err := q.db.Query(ctx, getFollowers,
+		arg.LoggedUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFollowersRow
+	for rows.Next() {
+		var i GetFollowersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserName,
+			&i.NickName,
+			&i.SelfIntroduction,
+			&i.ProfileImage,
+			&i.IsFollowed,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFollowingCount = `-- name: GetFollowingCount :one
+SELECT COUNT(*)
+FROM follows
+WHERE follower_id = $1
+`
+
+func (q *Queries) GetFollowingCount(ctx context.Context, followerID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getFollowingCount, followerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getFollowings = `-- name: GetFollowings :many
+SELECT
+  u.id,
+  u.user_name,
+  u.nick_name,
+  u.self_introduction,
+  u.profile_image,
+  EXISTS (
+    SELECT 1
+    FROM follows check_f
+    WHERE check_f.follower_id = $1::int AND check_f.following_id = u.id
+  ) AS is_followed
+FROM follows f
+INNER JOIN users u ON f.following_id = u.id
+WHERE f.follower_id = $2::int
+ORDER BY f.created_at DESC
+LIMIT $4::int OFFSET $3::int
+`
+
+type GetFollowingsParams struct {
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+	OffsetVal    int32 `json:"offset_val"`
+	LimitVal     int32 `json:"limit_val"`
+}
+
+type GetFollowingsRow struct {
+	ID               int32       `json:"id"`
+	UserName         pgtype.Text `json:"user_name"`
+	NickName         pgtype.Text `json:"nick_name"`
+	SelfIntroduction pgtype.Text `json:"self_introduction"`
+	ProfileImage     pgtype.Text `json:"profile_image"`
+	IsFollowed       bool        `json:"is_followed"`
+}
+
+// フォロー一覧で閲覧
+// 大量のデータ取得になるので、サブクエリよりもJOIN句を使用した方がパフォーマンスが上がる。(ただ今回はサブクエリ)
+// 「:many」なので、行の分だけEXISTS (...というサブクエリが実行されてしまうが、
+// 可読性を意識し、サブクエリ形式を選択。パフォーマンスの観点では複合インデックスを採用し、サブクエリでの欠点を補う
+func (q *Queries) GetFollowings(ctx context.Context, arg GetFollowingsParams) ([]GetFollowingsRow, error) {
+	rows, err := q.db.Query(ctx, getFollowings,
+		arg.LoggedUserID,
+		arg.TargetUserID,
+		arg.OffsetVal,
+		arg.LimitVal,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFollowingsRow
+	for rows.Next() {
+		var i GetFollowingsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserName,
+			&i.NickName,
+			&i.SelfIntroduction,
+			&i.ProfileImage,
+			&i.IsFollowed,
 		); err != nil {
 			return nil, err
 		}
@@ -652,32 +877,52 @@ func (q *Queries) GetTweetsByUserID(ctx context.Context, arg GetTweetsByUserIDPa
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, password, user_name, phone_number, nick_name, self_introduction, place, web_site, date_of_birth, profile_image, avatar_image, is_active, activation_token, activated_at, created_at, updated_at 
-FROM users
-WHERE id = $1
+SELECT
+  u.user_name,
+  u.self_introduction,
+  u.date_of_birth,
+  u.profile_image,
+  (SELECT COUNT(*) FROM follows f1 WHERE f1.follower_id = u.id)  AS following_count,
+  (SELECT COUNT(*) FROM follows f2 WHERE f2.following_id = u.id) AS follower_count,
+  (EXISTS (
+    SELECT 1 
+    FROM follows f3
+    WHERE f3.follower_id = $1::int AND f3.following_id = u.id
+  )) AS is_followed
+FROM users u
+WHERE u.id = $2
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
-	row := q.db.QueryRow(ctx, getUser, id)
-	var i User
+type GetUserParams struct {
+	LoggedUserID int32 `json:"logged_user_id"`
+	TargetUserID int32 `json:"target_user_id"`
+}
+
+type GetUserRow struct {
+	UserName         pgtype.Text `json:"user_name"`
+	SelfIntroduction pgtype.Text `json:"self_introduction"`
+	DateOfBirth      pgtype.Date `json:"date_of_birth"`
+	ProfileImage     pgtype.Text `json:"profile_image"`
+	FollowingCount   int64       `json:"following_count"`
+	FollowerCount    int64       `json:"follower_count"`
+	IsFollowed       bool        `json:"is_followed"`
+}
+
+// 1件の取得かつ、中間テーブルが1つという理由からサブクエリの方がいい
+// (SELECT COUNT(*)...は件数(10件や20件)という1つの数値を返却するためサブクエリでも問題がない
+// (EXISTS...は「指定されたユーザーとログインユーザーの関係性をチェックする処理なため」サブクエリで書く方が可読性が高い
+// 「:one」の場合、可読性が高く、パフォーマンスへの影響も少ないことから、サブクエリ形式を選択
+func (q *Queries) GetUser(ctx context.Context, arg GetUserParams) (GetUserRow, error) {
+	row := q.db.QueryRow(ctx, getUser, arg.LoggedUserID, arg.TargetUserID)
+	var i GetUserRow
 	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Password,
 		&i.UserName,
-		&i.PhoneNumber,
-		&i.NickName,
 		&i.SelfIntroduction,
-		&i.Place,
-		&i.WebSite,
 		&i.DateOfBirth,
 		&i.ProfileImage,
-		&i.AvatarImage,
-		&i.IsActive,
-		&i.ActivationToken,
-		&i.ActivatedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.FollowingCount,
+		&i.FollowerCount,
+		&i.IsFollowed,
 	)
 	return i, err
 }

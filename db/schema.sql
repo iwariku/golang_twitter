@@ -48,3 +48,14 @@ CREATE TABLE bookmarks (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (user_id, tweet_id)
 );
+
+CREATE TABLE follows (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  follower_id INTEGER REFERENCES users(id) NOT NULL,
+  following_id INTEGER REFERENCES users(id) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- フォロー/フォロワー一覧でのパフォーマンス向上のため
+CREATE INDEX idx_follow ON follows (following_id,follower_id);
