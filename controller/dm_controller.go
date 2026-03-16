@@ -177,3 +177,47 @@ func (dc *DmController) GetMessagesByGroupID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, filtedMessagesRes)
 }
+
+// 構造体はこのメソッド内でいいのか。ここだけであれば問題がない
+// dbから取得したデータとレスポンスの変数名の命名規則を明確にする必要がある
+func (dc *DmController) GetGroups(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	dbGroups, err := dc.Queries.GetGroups(c.Request.Context(), loggedUserId)
+	if err != nil {
+		log.Printf("グループの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "グループの取得に失敗しました"})
+		return
+	}
+
+	type GroupsResponse struct {
+		UserID    int32  `json:"user_id"`
+		DmGroupID int32  `json:"dm_group_id"`
+		Name      string `json:"name"`
+	}
+
+	groupsRes := make([]GroupsResponse, len(dbGroups))
+	for i, g := range dbGroups {
+		groupsRes[i] = GroupsResponse{
+			UserID:    g.UserID,
+			DmGroupID: g.DmGroupID,
+			Name:      g.Name,
+		}
+	}
+
+	type GroupsListResponse struct {
+		Groups []GroupsResponse `json:"groups"`
+	}
+
+	groupsListRes := GroupsListResponse{
+		Groups: groupsRes,
+	}
+
+	c.JSON(http.StatusOK, groupsListRes)
+
+}
