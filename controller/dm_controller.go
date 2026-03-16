@@ -30,6 +30,16 @@ type GroupMemberResponse struct {
 	DmGroupID int32 `json:"dm_group_id"`
 }
 
+// メッセージを送信する際に必要な情報
+type MessageRequest struct {
+	Message string `json:"message" binding:"required"`
+}
+
+type MessageResponse struct {
+	UserID  int32  `json:"user_id"`
+	Message string `json:"message"`
+}
+
 // リクエストはグループ名のみ
 func (dc *DmController) CreateGroup(c *gin.Context) {
 	var req GroupRequest
@@ -85,5 +95,49 @@ func (dc *DmController) AddMemberToGroup(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, groupMemberRes)
+
+}
+
+// 必要なデータ、誰が: user_id,どこに: dm_group_id、何を: message
+func (dc *DmController) CreateMessage(c *gin.Context) {
+	var req MessageRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("JSONの形式が違います: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSONの形式が違います"})
+		return
+	}
+
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	targetGroupId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, "idの形式が違います")
+		return
+	}
+
+	Message, err := dc.Queries.CreateMessage(c.Request.Context(), db.CreateMessageParams{
+		UserID:    loggedUserId,
+		DmGroupID: targetGroupId,
+		Message:   req.Message,
+	})
+	if err != nil {
+		log.Printf("メッセージの作成に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "メッセージの作成に失敗しました"})
+		return
+	}
+
+	messageRes := MessageResponse{
+		UserID:  Message.UserID,
+		Message: Message.Message,
+	}
+
+	c.JSON(http.StatusOK, messageRes)
 
 }
