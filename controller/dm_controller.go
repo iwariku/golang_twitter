@@ -141,3 +141,39 @@ func (dc *DmController) CreateMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, messageRes)
 
 }
+
+// user_idはどうする？今のままだと自分と違うグループのユーザーの見れてしまう
+// SQLのWHERE句にuser_idもつけるのが一番簡単。ただ、ユーザー数が多くいる場合はどうする？
+func (dc *DmController) GetMessagesByGroupID(c *gin.Context) {
+	targetGroupId, err := utils.ParseParamInt32(c, "id")
+	if err != nil {
+		log.Printf("パラメータ解析に失敗しました: %v", err)
+		c.JSON(http.StatusBadRequest, "idの形式が違います")
+		return
+	}
+
+	dbMessages, err := dc.Queries.GetMessagesByGroupID(c.Request.Context(), targetGroupId)
+	if err != nil {
+		log.Printf("メッセージの取得に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "メッセージの取得に失敗しました"})
+		return
+	}
+
+	messagesRes := make([]MessageResponse, len(dbMessages))
+	for i, m := range dbMessages {
+		messagesRes[i] = MessageResponse{
+			UserID:  m.UserID,
+			Message: m.Message,
+		}
+	}
+
+	type MessagesResponse struct {
+		Messages []MessageResponse `json:"messages"`
+	}
+
+	filtedMessagesRes := MessagesResponse{
+		Messages: messagesRes,
+	}
+
+	c.JSON(http.StatusOK, filtedMessagesRes)
+}

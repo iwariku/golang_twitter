@@ -105,7 +105,7 @@ func main() {
 		authGroup.POST("/api/dm/group", dc.CreateGroup)
 		authGroup.POST("/api/dm/groups/:id/members", dc.AddMemberToGroup)
 		authGroup.POST("/api/dm/groups/:id/message", dc.CreateMessage)
-
+		authGroup.GET("/api/dm/groups/:id/messages", dc.GetMessagesByGroupID)
 	}
 
 	r.Run()
