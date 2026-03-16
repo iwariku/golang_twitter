@@ -22,6 +22,7 @@ func main() {
 	redisClient := infrastructure.NewRedisClient()
 	uc := &controller.UserController{Queries: queries, Mailer: mailer, Redis: redisClient}
 	tc := &controller.TweetController{Queries: queries, Redis: redisClient}
+	dc := &controller.DmController{Queries: queries, Redis: redisClient}
 	am := &middleware.AuthMiddleware{Redis: redisClient}
 
 	r := gin.Default()
@@ -99,6 +100,10 @@ func main() {
 			c.HTML(http.StatusOK, "follows.html", nil)
 		})
 		authGroup.GET("/api/users/:id/followers", uc.GetFollowers)
+
+		// --- DM機能 ---
+		authGroup.POST("/api/dm/group", dc.CreateGroup)
+
 	}
 
 	r.Run()
