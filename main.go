@@ -103,6 +103,7 @@ func main() {
 
 		// --- DM機能 ---
 		authGroup.POST("/api/dm/group", dc.CreateGroup)
+		authGroup.POST("/api/dm/groups/:id/members", dc.AddMemberToGroup)
 
 	}
 
