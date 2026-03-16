@@ -344,7 +344,7 @@ RETURNING *;
 
 -- グループ内のメッセージを参照できるようにメッセージ一覧を実装する
 -- 必要なデータ、誰の:user_id、メッセージか: message どこのグループに所属しているか?: dm_group_id = $1;
--- name: GetMessagesByGruopID :many
+-- name: GetMessagesByGroupID :many
 SELECT
   user_id,
   message

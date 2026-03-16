@@ -665,7 +665,7 @@ func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (b
 	return exists, err
 }
 
-const getMessagesByGruopID = `-- name: GetMessagesByGruopID :many
+const getMessagesByGroupID = `-- name: GetMessagesByGroupID :many
 SELECT
   user_id,
   message
@@ -673,22 +673,22 @@ FROM dm_messages
 WHERE dm_group_id = $1
 `
 
-type GetMessagesByGruopIDRow struct {
+type GetMessagesByGroupIDRow struct {
 	UserID  int32  `json:"user_id"`
 	Message string `json:"message"`
 }
 
 // グループ内のメッセージを参照できるようにメッセージ一覧を実装する
 // 必要なデータ、誰の:user_id、メッセージか: message どこのグループに所属しているか?: dm_group_id = $1;
-func (q *Queries) GetMessagesByGruopID(ctx context.Context, dmGroupID int32) ([]GetMessagesByGruopIDRow, error) {
-	rows, err := q.db.Query(ctx, getMessagesByGruopID, dmGroupID)
+func (q *Queries) GetMessagesByGroupID(ctx context.Context, dmGroupID int32) ([]GetMessagesByGroupIDRow, error) {
+	rows, err := q.db.Query(ctx, getMessagesByGroupID, dmGroupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetMessagesByGruopIDRow
+	var items []GetMessagesByGroupIDRow
 	for rows.Next() {
-		var i GetMessagesByGruopIDRow
+		var i GetMessagesByGroupIDRow
 		if err := rows.Scan(&i.UserID, &i.Message); err != nil {
 			return nil, err
 		}
