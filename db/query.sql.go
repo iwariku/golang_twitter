@@ -24,28 +24,28 @@ func (q *Queries) ActivateUser(ctx context.Context, activationToken pgtype.Text)
 
 const addMemberToGroup = `-- name: AddMemberToGroup :one
 INSERT INTO dm_group_members (
-  dm_group_id,
-  user_id
+  user_id,
+  dm_group_id
 ) VALUES (
   $1, $2
 )
-RETURNING id, dm_group_id, user_id, created_at
+RETURNING id, user_id, dm_group_id, created_at
 `
 
 type AddMemberToGroupParams struct {
-	DmGroupID int32 `json:"dm_group_id"`
 	UserID    int32 `json:"user_id"`
+	DmGroupID int32 `json:"dm_group_id"`
 }
 
 // グループが作成されたら、ログインしているユーザーとグループidを使って作成されたグループに自分を入れる
 // これはdm_groupsではnameカラムしか持たず、ユーザー情報はdm_group_membersに入れるという設計にしているため
 func (q *Queries) AddMemberToGroup(ctx context.Context, arg AddMemberToGroupParams) (DmGroupMember, error) {
-	row := q.db.QueryRow(ctx, addMemberToGroup, arg.DmGroupID, arg.UserID)
+	row := q.db.QueryRow(ctx, addMemberToGroup, arg.UserID, arg.DmGroupID)
 	var i DmGroupMember
 	err := row.Scan(
 		&i.ID,
-		&i.DmGroupID,
 		&i.UserID,
+		&i.DmGroupID,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -141,7 +141,7 @@ INSERT INTO dm_messages (
 ) VALUES (
   $1, $2, $3
 )
-RETURNING id, dm_group_id, user_id, message, created_at
+RETURNING id, user_id, dm_group_id, message, created_at
 `
 
 type CreateMessageParams struct {
@@ -158,8 +158,8 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (D
 	var i DmMessage
 	err := row.Scan(
 		&i.ID,
-		&i.DmGroupID,
 		&i.UserID,
+		&i.DmGroupID,
 		&i.Message,
 		&i.CreatedAt,
 	)

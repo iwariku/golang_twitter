@@ -23,15 +23,15 @@ type DmGroup struct {
 
 type DmGroupMember struct {
 	ID        int32            `json:"id"`
-	DmGroupID int32            `json:"dm_group_id"`
 	UserID    int32            `json:"user_id"`
+	DmGroupID int32            `json:"dm_group_id"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
 type DmMessage struct {
 	ID        int32            `json:"id"`
-	DmGroupID int32            `json:"dm_group_id"`
 	UserID    int32            `json:"user_id"`
+	DmGroupID int32            `json:"dm_group_id"`
 	Message   string           `json:"message"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
