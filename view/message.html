@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>メッセージを送信</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/js/dm.js" defer></script>
+  </head>
+  <body class="bg-gray-400 flex items-center justify-center min-h-screen">
+    <div
+      class="relative bg-white border-gray-500 w-full max-w-lg rounded-2xl p-8"
+    >
+      <a
+        href="/"
+        class="absolute left-4 top-1 p-2 rounded-full hover:bg-gray-200 transition-colors text-xl"
+      >
+        ×
+      </a>
+
+      <h2 class="text-3xl font-bold mb-10">メッセージを送信</h2>
+
+      <form id="sendMessageForm" class="space-y-6">
+        <input
+          type="text"
+          id="messageContent"
+          required
+          class="w-full border border-gray-300 rounded p-4 focus:border-sky-500 outline-none transition-colors"
+          placeholder="メッセージを入力してください"
+        />
+        <button
+          type="submit"
+          class="w-full bg-gray-400 font-bold py-3 rounded-full text-lg hover:bg-blue-400 transition-colors"
+        >
+          メッセージを送る
+        </button>
+      </form>
+    </div>
+  </body>
+</html>

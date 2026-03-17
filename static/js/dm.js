@@ -63,3 +63,44 @@ document
 
     await addMemberToGroup(userId, groupId);
   });
+
+const createMessage = async () => {
+  const messageInput = document.getElementById('messageContent');
+
+  if (!messageInput) {
+    console.error("入力欄(id='messageContent')が見つかりません");
+    return;
+  }
+
+  const messageText = messageInput.value;
+
+  const pathParts = window.location.pathname.split('/');
+  const groupId = parseInt(pathParts[3]);
+
+  console.log('送信先GroupID:', groupId); // デバッグ用
+
+  try {
+    const response = await fetch(`/api/dm/groups/${groupId}/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: messageText }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`送信失敗: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('送信成功:', data);
+    alert('メッセージを送信しました！');
+  } catch (error) {
+    console.error('エラー発生:', error);
+    alert(error.message);
+  }
+};
+
+// 3. フォームのIDをHTMLの <form id="sendMessageForm"> に合わせる
+document.getElementById('sendMessageForm')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  createMessage();
+});
