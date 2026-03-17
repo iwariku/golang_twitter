@@ -107,9 +107,9 @@ func main() {
 		})
 		authGroup.POST("/api/dm/group", dc.CreateGroup)
 
-		// authGroup.GET("/dm/groups", func(c *gin.Context) {
-		// 	c.HTML(http.StatusOK, "groups.html", nil)
-		// })
+		authGroup.GET("/dm/groups", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "groups.html", nil)
+		})
 		authGroup.GET("/api/dm/groups", dc.GetGroups)
 
 		authGroup.GET("/dm/add-member", func(c *gin.Context) {

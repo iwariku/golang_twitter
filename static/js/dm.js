@@ -144,3 +144,55 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMessages();
   }
 });
+
+/**
+ * 所属グループ一覧を取得して描画する
+ */
+const loadGroups = async () => {
+  const container = document.getElementById('groupList');
+  if (!container) return;
+
+  try {
+    const response = await fetch('/api/dm/groups');
+    if (!response.ok) throw new Error('グループの取得に失敗しました');
+
+    const data = await response.json();
+    const groups = data.groups || [];
+
+    container.innerHTML = '';
+
+    groups.forEach((group) => {
+      const card = document.createElement('div');
+      card.className =
+        'p-4 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer flex items-center gap-4';
+
+      card.innerHTML = `
+        <div class="w-12 h-12 bg-gray-200 rounded-full flex-shrink-0 flex items-center justify-center">
+          <span class="text-xl">👥</span>
+        </div>
+        <div class="flex-1">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-[16px]">${group.name}</span>
+            <span class="text-[12px] text-gray-400">ID: ${group.dm_group_id}</span>
+          </div>
+          <p class="text-sm text-gray-500 truncate mt-1">メッセージを見る</p>
+        </div>
+      `;
+
+      // クリックでメッセージ一覧画面へ遷移
+      card.onclick = () => {
+        window.location.href = `/dm/groups/${group.dm_group_id}/messages`;
+      };
+
+      container.appendChild(card);
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    container.innerHTML =
+      '<div class="text-red-500 text-center py-10">エラーが発生しました</div>';
+  }
+};
+
+if (window.location.pathname === '/dm/groups') {
+  loadGroups();
+}
