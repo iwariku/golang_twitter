@@ -70,27 +70,30 @@ func (dc *DmController) CreateGroup(c *gin.Context) {
 // 別のユーザーを追加するときは別のメソッドを定義する方がいいと思う(単一責任の原則とRESTの設計に準ずる)
 // グループに、自分と相手が追加される
 func (dc *DmController) AddMemberToGroup(c *gin.Context) {
-	loggedUserId, err := GetUserIDFromContext(c)
-	if err != nil {
-		log.Printf("ログインチェックの失敗: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
-		return
+	type AddmemberRequest struct {
+		UserID  int32 `json:"user_id"`
+		GroupID int32 `json:"group_id"`
 	}
 
-	targetGroupId, err := utils.ParseParamInt32(c, "id")
-	if err != nil {
-		log.Printf("パラメータ解析に失敗しました: %v", err)
-		c.JSON(http.StatusBadRequest, "idの形式が違います")
+	var req AddmemberRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("JSONの形式が違います: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JSONの形式が違います"})
 		return
 	}
 
 	groupMember, err := dc.Queries.AddMemberToGroup(c.Request.Context(), db.AddMemberToGroupParams{
-		UserID:    loggedUserId,
-		DmGroupID: targetGroupId,
+		UserID:    req.UserID,
+		DmGroupID: req.GroupID,
 	})
+	if err != nil {
+		log.Printf("DBへの保存に失敗しました: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBへの保存に失敗しました"})
+		return
+	}
 
 	groupMemberRes := GroupMemberResponse{
-		UserID:    loggedUserId,
+		UserID:    groupMember.UserID,
 		DmGroupID: groupMember.DmGroupID,
 	}
 
