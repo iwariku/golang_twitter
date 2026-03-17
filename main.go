@@ -102,11 +102,14 @@ func main() {
 		authGroup.GET("/api/users/:id/followers", uc.GetFollowers)
 
 		// --- DM機能 ---
+		authGroup.GET("/dm/group", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "create-group.html", nil)
+		})
 		authGroup.POST("/api/dm/group", dc.CreateGroup)
-		authGroup.POST("/api/dm/groups/:id/members", dc.AddMemberToGroup)
+		authGroup.GET("/api/dm/groups", dc.GetGroups)
+		authGroup.POST("/api/dm/add-member", dc.AddMemberToGroup)
 		authGroup.POST("/api/dm/groups/:id/message", dc.CreateMessage)
 		authGroup.GET("/api/dm/groups/:id/messages", dc.GetMessagesByGroupID)
-		authGroup.GET("/api/dm/groups", dc.GetGroups)
 	}
 
 	r.Run()
