@@ -29,3 +29,37 @@ document.getElementById('createGroupForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
   createGroup();
 });
+
+const addMemberToGroup = async (userId, groupId) => {
+  try {
+    const response = await fetch(`/api/dm/add-member`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, group_id: groupId }),
+    });
+
+    if (!response.ok) throw new Error(`追加失敗: ${response.status}`);
+    console.log('メンバー追加成功');
+  } catch (error) {
+    console.error('メンバー追加エラー:', error);
+  }
+};
+
+document
+  .getElementById('addMemberForm')
+  ?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const userIdInput = document.getElementById('user_id');
+    const userId = parseInt(userIdInput.value);
+
+    const groupIdInput = document.getElementById('group_id');
+    const groupId = parseInt(groupIdInput.value);
+
+    if (!groupId || isNaN(userId)) {
+      alert('グループIDまたはユーザーIDが正しくありません');
+      return;
+    }
+
+    await addMemberToGroup(userId, groupId);
+  });

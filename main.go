@@ -106,8 +106,17 @@ func main() {
 			c.HTML(http.StatusOK, "create-group.html", nil)
 		})
 		authGroup.POST("/api/dm/group", dc.CreateGroup)
+
+		// authGroup.GET("/dm/groups", func(c *gin.Context) {
+		// 	c.HTML(http.StatusOK, "groups.html", nil)
+		// })
 		authGroup.GET("/api/dm/groups", dc.GetGroups)
+
+		authGroup.GET("/dm/add-member", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "add-member.html", nil)
+		})
 		authGroup.POST("/api/dm/add-member", dc.AddMemberToGroup)
+
 		authGroup.POST("/api/dm/groups/:id/message", dc.CreateMessage)
 		authGroup.GET("/api/dm/groups/:id/messages", dc.GetMessagesByGroupID)
 	}
