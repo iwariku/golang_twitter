@@ -121,6 +121,10 @@ func main() {
 			c.HTML(http.StatusOK, "message.html", nil)
 		})
 		authGroup.POST("/api/dm/groups/:id/message", dc.CreateMessage)
+
+		authGroup.GET("/dm/groups/:id/messages", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "groups-messages.html", nil)
+		})
 		authGroup.GET("/api/dm/groups/:id/messages", dc.GetMessagesByGroupID)
 	}
 

@@ -104,3 +104,43 @@ document.getElementById('sendMessageForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
   createMessage();
 });
+
+const loadMessages = async () => {
+  const messageList = document.getElementById('messageList');
+  if (!messageList) return;
+
+  const pathParts = window.location.pathname.split('/');
+  const groupId = pathParts[3];
+
+  try {
+    const response = await fetch(`/api/dm/groups/${groupId}/messages`);
+    if (!response.ok) throw new Error('メッセージの取得に失敗しました');
+
+    const data = await response.json();
+    const messages = data.messages || [];
+
+    messageList.innerHTML = '';
+
+    messages.forEach((msg) => {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'p-3 rounded-lg bg-gray-100 w-fit max-w-[80%]';
+      msgDiv.innerHTML = `
+        <div class="text-[10px] text-black font-bold">ユーザーID: ${msg.user_id}</div>
+        <div class="text-sm">${msg.message}</div>
+      `;
+      messageList.appendChild(msgDiv);
+    });
+  } catch (error) {
+    console.error(error);
+    messageList.innerHTML =
+      '<div class="text-red-500 text-center">読み込みエラー</div>';
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const path = window.location.pathname;
+
+  if (path.includes('/messages')) {
+    loadMessages();
+  }
+});
