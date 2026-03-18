@@ -15,26 +15,6 @@ type DmController struct {
 	Redis   *redis.Client
 }
 
-// リクエストする時に必要な情報
-type GroupRequest struct {
-	Name string `json:"name" binding:"required"`
-}
-
-type GroupResponse struct {
-	ID   int32  `json:"id"`
-	Name string `json:"name"`
-}
-
-type GroupMemberResponse struct {
-	UserID    int32 `json:"user_id"`
-	DmGroupID int32 `json:"dm_group_id"`
-}
-
-// メッセージを送信する際に必要な情報
-type MessageRequest struct {
-	Message string `json:"message" binding:"required"`
-}
-
 type MessageResponse struct {
 	UserID  int32  `json:"user_id"`
 	Message string `json:"message"`
@@ -42,6 +22,15 @@ type MessageResponse struct {
 
 // リクエストはグループ名のみ
 func (dc *DmController) CreateGroup(c *gin.Context) {
+	type GroupRequest struct {
+		Name string `json:"name" binding:"required"`
+	}
+
+	type GroupResponse struct {
+		ID   int32  `json:"id"`
+		Name string `json:"name"`
+	}
+
 	var req GroupRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -75,7 +64,13 @@ func (dc *DmController) AddMemberToGroup(c *gin.Context) {
 		GroupID int32 `json:"group_id"`
 	}
 
+	type GroupMemberResponse struct {
+		UserID    int32 `json:"user_id"`
+		DmGroupID int32 `json:"dm_group_id"`
+	}
+
 	var req AddmemberRequest
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("JSONの形式が違います: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSONの形式が違います"})
@@ -103,6 +98,10 @@ func (dc *DmController) AddMemberToGroup(c *gin.Context) {
 
 // 必要なデータ、誰が: user_id,どこに: dm_group_id、何を: message
 func (dc *DmController) CreateMessage(c *gin.Context) {
+	type MessageRequest struct {
+		Message string `json:"message" binding:"required"`
+	}
+
 	var req MessageRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
