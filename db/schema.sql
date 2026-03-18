@@ -72,6 +72,7 @@ CREATE TABLE dm_group_members (
   user_id INTEGER REFERENCES users(id) NOT NULL,
   dm_group_id INTEGER REFERENCES dm_groups(id) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  UNIQUE(user_id, dm_group_id)
 );
 
 CREATE TABLE dm_messages (
