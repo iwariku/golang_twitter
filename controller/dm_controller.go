@@ -54,10 +54,6 @@ func (dc *DmController) CreateGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, groupNameRes)
 }
 
-// あるユーザーが作成したグループに、自分と相手が追加される(単一責任の原則について考慮する)
-// トランザクションを使って一連の動きにするのであればログインユーザーを使う
-// 別のユーザーを追加するときは別のメソッドを定義する方がいいと思う(単一責任の原則とRESTの設計に準ずる)
-// グループに、自分と相手が追加される
 func (dc *DmController) AddMemberToGroup(c *gin.Context) {
 	type AddmemberRequest struct {
 		UserID  int32 `json:"user_id"`
@@ -144,8 +140,6 @@ func (dc *DmController) CreateMessage(c *gin.Context) {
 
 }
 
-// user_idはどうする？今のままだと自分と違うグループのユーザーの見れてしまう
-// SQLのWHERE句にuser_idもつけるのが一番簡単。ただ、ユーザー数が多くいる場合はどうする？
 func (dc *DmController) GetMessagesByGroupID(c *gin.Context) {
 	targetGroupId, err := utils.ParseParamInt32(c, "id")
 	if err != nil {
@@ -173,11 +167,11 @@ func (dc *DmController) GetMessagesByGroupID(c *gin.Context) {
 		Messages []MessageResponse `json:"messages"`
 	}
 
-	filtedMessagesRes := MessagesResponse{
+	messageListRes := MessagesResponse{
 		Messages: messagesRes,
 	}
 
-	c.JSON(http.StatusOK, filtedMessagesRes)
+	c.JSON(http.StatusOK, messageListRes)
 }
 
 // 構造体はこのメソッド内でいいのか。ここだけであれば問題がない
@@ -212,14 +206,14 @@ func (dc *DmController) GetGroups(c *gin.Context) {
 		}
 	}
 
-	type GroupsListResponse struct {
+	type GroupListResponse struct {
 		Groups []GroupsResponse `json:"groups"`
 	}
 
-	groupsListRes := GroupsListResponse{
+	groupListRes := GroupListResponse{
 		Groups: groupsRes,
 	}
 
-	c.JSON(http.StatusOK, groupsListRes)
+	c.JSON(http.StatusOK, groupListRes)
 
 }
