@@ -304,3 +304,61 @@ INNER JOIN users u ON f.follower_id = u.id
 WHERE f.following_id = @target_user_id::int
 ORDER BY f.created_at DESC
 LIMIT @limit_val::int OFFSET @offset_val::int;
+
+-- DM機能
+-- グループ作成を実装する
+-- :oneにするのはこの作成したgroupsテーブルのidを別のテーブルで使用するため。必要がない場合は:execに変更する
+-- グループ作成の時にグループ名を入力するイメージ
+-- 必要なデータ、誰が作ったか:user_id、グループ名:name
+-- name: CreateGroup :one
+INSERT INTO dm_groups (
+  name
+) VALUES (
+  $1
+)
+RETURNING *;
+
+-- グループが作成されたら、ログインしているユーザーとグループidを使って作成されたグループに自分を入れる
+-- これはdm_groupsではnameカラムしか持たず、ユーザー情報はdm_group_membersに入れるという設計にしているため
+-- name: AddMemberToGroup :one
+INSERT INTO dm_group_members (
+  user_id,
+  dm_group_id
+) VALUES (
+  $1, $2
+)
+RETURNING *;
+
+-- グループでメッセージを投稿できるようにする
+-- user_idはCookieにセットしあるsessionIDを使う
+-- 必要なデータ、誰が: user_id,どこに: dm_group_id、何を: message
+-- name: CreateMessage :one
+INSERT INTO dm_messages (
+  user_id,
+  dm_group_id,
+  message
+) VALUES (
+  $1, $2, $3
+)
+RETURNING *;
+
+-- グループ内のメッセージを参照できるようにメッセージ一覧を実装する
+-- 必要なデータ、誰の:user_id、メッセージか: message どこのグループに所属しているか?: dm_group_id = $1;
+-- name: GetMessagesByGroupID :many
+SELECT
+  user_id,
+  message
+FROM dm_messages
+WHERE dm_group_id = $1;
+
+-- グループの一覧を参照できるようにする
+-- WHEREがないと自分の所属しているグループ以外も表示されてしまう。
+-- 別名のエイリアスについて質問する
+-- name: GetGroups :many
+SELECT
+  dm_group_members.user_id,
+  dm_group_members.dm_group_id,
+  dm_groups.name
+FROM dm_group_members
+JOIN dm_groups  ON dm_group_members.dm_group_id = dm_groups.id
+WHERE dm_group_members.user_id = $1;

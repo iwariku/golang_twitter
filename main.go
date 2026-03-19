@@ -22,6 +22,7 @@ func main() {
 	redisClient := infrastructure.NewRedisClient()
 	uc := &controller.UserController{Queries: queries, Mailer: mailer, Redis: redisClient}
 	tc := &controller.TweetController{Queries: queries, Redis: redisClient}
+	dc := &controller.DmController{Queries: queries, Redis: redisClient}
 	am := &middleware.AuthMiddleware{Redis: redisClient}
 
 	r := gin.Default()
@@ -99,6 +100,32 @@ func main() {
 			c.HTML(http.StatusOK, "follows.html", nil)
 		})
 		authGroup.GET("/api/users/:id/followers", uc.GetFollowers)
+
+		// --- DM機能 ---
+		authGroup.GET("/dm/group", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "create-group.html", nil)
+		})
+		authGroup.POST("/api/dm/group", dc.CreateGroup)
+
+		authGroup.GET("/dm/groups", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "groups.html", nil)
+		})
+		authGroup.GET("/api/dm/groups", dc.GetGroups)
+
+		authGroup.GET("/dm/add-member", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "add-member.html", nil)
+		})
+		authGroup.POST("/api/dm/add-member", dc.AddMemberToGroup)
+
+		authGroup.GET("dm/groups/:id/message", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "message.html", nil)
+		})
+		authGroup.POST("/api/dm/groups/:id/message", dc.CreateMessage)
+
+		authGroup.GET("/dm/groups/:id/messages", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "groups-messages.html", nil)
+		})
+		authGroup.GET("/api/dm/groups/:id/messages", dc.GetMessagesByGroupID)
 	}
 
 	r.Run()
