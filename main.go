@@ -99,6 +99,11 @@ func main() {
 			c.HTML(http.StatusOK, "follows.html", nil)
 		})
 		authGroup.GET("/api/users/:id/followers", uc.GetFollowers)
+
+		authGroup.GET("/user/unsubscribe", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "unsubscribe.html", nil)
+		})
+		authGroup.DELETE("/api/user/unsubscribe", uc.DeleteUser)
 	}
 
 	r.Run()

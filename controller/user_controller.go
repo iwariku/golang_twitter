@@ -150,6 +150,33 @@ func (uc *UserController) Login(c *gin.Context) {
 	log.Printf("ログインできました")
 }
 
+func (uc *UserController) DeleteUser(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインが必要です: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	hasUser, err := uc.Queries.GetUserExists(c.Request.Context(), loggedUserId)
+	if err != nil {
+		log.Printf("条件に合致するユーザーがありませんでした")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "条件に合致するユーザーがありませんでした"})
+		return
+	}
+
+	if hasUser {
+		err = uc.Queries.DeleteUser(c.Request.Context(), loggedUserId)
+		if err != nil {
+			log.Printf("データの削除に失敗しました")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "退会できませんでした"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": "ユーザーの退会に成功しました"})
+}
+
 // ユーザー詳細
 // v: クライアントからuser_idの情報を叩くfetchAPI
 // c: dbにアクセスできる形式に変形
