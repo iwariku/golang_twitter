@@ -9,6 +9,18 @@ INSERT INTO users (
 )
 RETURNING *;
 
+-- name: DeleteUser :exec
+DELETE
+FROM users
+WHERE id = $1;
+
+-- name: GetUserExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM users
+  WHERE id = $1
+);
+
 -- name: ActivateUser :exec
 UPDATE users
 SET is_active = true, activation_token = NULL, activated_at = CURRENT_TIMESTAMP

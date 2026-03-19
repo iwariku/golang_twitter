@@ -326,6 +326,17 @@ func (q *Queries) DeleteRetweet(ctx context.Context, arg DeleteRetweetParams) er
 	return err
 }
 
+const deleteUser = `-- name: DeleteUser :exec
+DELETE
+FROM users
+WHERE id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
+}
+
 const getBookmarkExists = `-- name: GetBookmarkExists :one
 SELECT EXISTS (
   SELECT 1
@@ -1107,4 +1118,19 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.IsActive,
 	)
 	return i, err
+}
+
+const getUserExists = `-- name: GetUserExists :one
+SELECT EXISTS (
+  SELECT 1
+  FROM users
+  WHERE id = $1
+)
+`
+
+func (q *Queries) GetUserExists(ctx context.Context, id int32) (bool, error) {
+	row := q.db.QueryRow(ctx, getUserExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
