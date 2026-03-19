@@ -32,12 +32,26 @@ const login = () => {
   });
 };
 
+const unsubscribe = async () => {
+  document
+    .getElementById('unsubscribeForm')
+    ?.addEventListener('click', async () => {
+      const response = await fetch('/api/user/unsubscribe', {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      alert('退会に成功しました');
+    });
+};
+
 const dispatchPathTask = () => {
   const path = window.location.pathname;
   if (path.includes('signup')) {
     signUp();
   } else if (path.includes('login')) {
     login();
+  } else if (path.includes('unsubscribe')) {
+    unsubscribe();
   }
 };
 
