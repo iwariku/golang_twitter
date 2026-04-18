@@ -208,6 +208,7 @@ func (uc *UserController) GetUser(c *gin.Context) {
 	}
 
 	UserRes := UserResponse{
+		ID:               dbUser.ID,
 		UserName:         dbUser.UserName.String,
 		SelfIntroduction: dbUser.SelfIntroduction.String,
 		DateOfBirth:      dbUser.DateOfBirth.Time,
@@ -436,14 +437,14 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 		return
 	}
 
-	followingListRes := make([]FollowListResponse, len(dbFollowingList))
+	followingListRes := make([]UserResponse, len(dbFollowingList))
 	for i, f := range dbFollowingList {
-		followingListRes[i] = FollowListResponse{
+		followingListRes[i] = UserResponse{
 			ID:               f.ID,
 			UserName:         f.UserName.String,
-			NickName:         f.NickName.String,
 			SelfIntroduction: f.SelfIntroduction.String,
 			ProfileImage:     f.ProfileImage.String,
+			IsFollowed:       f.IsFollowed,
 		}
 	}
 
@@ -503,14 +504,14 @@ func (uc *UserController) GetFollowers(c *gin.Context) {
 		return
 	}
 
-	followerListRes := make([]FollowListResponse, len(dbFollowerList))
+	followerListRes := make([]UserResponse, len(dbFollowerList))
 	for i, f := range dbFollowerList {
-		followerListRes[i] = FollowListResponse{
+		followerListRes[i] = UserResponse{
 			ID:               f.ID,
 			UserName:         f.UserName.String,
-			NickName:         f.NickName.String,
 			SelfIntroduction: f.SelfIntroduction.String,
 			ProfileImage:     f.ProfileImage.String,
+			IsFollowed:       f.IsFollowed,
 		}
 	}
 

@@ -464,7 +464,6 @@ const getFollowers = `-- name: GetFollowers :many
 SELECT
   u.id,
   u.user_name,
-  u.nick_name,
   u.self_introduction,
   u.profile_image,
   EXISTS (
@@ -489,7 +488,6 @@ type GetFollowersParams struct {
 type GetFollowersRow struct {
 	ID               int32       `json:"id"`
 	UserName         pgtype.Text `json:"user_name"`
-	NickName         pgtype.Text `json:"nick_name"`
 	SelfIntroduction pgtype.Text `json:"self_introduction"`
 	ProfileImage     pgtype.Text `json:"profile_image"`
 	IsFollowed       bool        `json:"is_followed"`
@@ -517,7 +515,6 @@ func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]G
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserName,
-			&i.NickName,
 			&i.SelfIntroduction,
 			&i.ProfileImage,
 			&i.IsFollowed,
@@ -549,7 +546,6 @@ const getFollowings = `-- name: GetFollowings :many
 SELECT
   u.id,
   u.user_name,
-  u.nick_name,
   u.self_introduction,
   u.profile_image,
   EXISTS (
@@ -574,7 +570,6 @@ type GetFollowingsParams struct {
 type GetFollowingsRow struct {
 	ID               int32       `json:"id"`
 	UserName         pgtype.Text `json:"user_name"`
-	NickName         pgtype.Text `json:"nick_name"`
 	SelfIntroduction pgtype.Text `json:"self_introduction"`
 	ProfileImage     pgtype.Text `json:"profile_image"`
 	IsFollowed       bool        `json:"is_followed"`
@@ -601,7 +596,6 @@ func (q *Queries) GetFollowings(ctx context.Context, arg GetFollowingsParams) ([
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserName,
-			&i.NickName,
 			&i.SelfIntroduction,
 			&i.ProfileImage,
 			&i.IsFollowed,
@@ -1046,6 +1040,7 @@ func (q *Queries) GetTweetsByUserID(ctx context.Context, arg GetTweetsByUserIDPa
 
 const getUser = `-- name: GetUser :one
 SELECT
+  u.id,
   u.user_name,
   u.self_introduction,
   u.date_of_birth,
@@ -1067,6 +1062,7 @@ type GetUserParams struct {
 }
 
 type GetUserRow struct {
+	ID               int32       `json:"id"`
 	UserName         pgtype.Text `json:"user_name"`
 	SelfIntroduction pgtype.Text `json:"self_introduction"`
 	DateOfBirth      pgtype.Date `json:"date_of_birth"`
@@ -1084,6 +1080,7 @@ func (q *Queries) GetUser(ctx context.Context, arg GetUserParams) (GetUserRow, e
 	row := q.db.QueryRow(ctx, getUser, arg.LoggedUserID, arg.TargetUserID)
 	var i GetUserRow
 	err := row.Scan(
+		&i.ID,
 		&i.UserName,
 		&i.SelfIntroduction,
 		&i.DateOfBirth,
