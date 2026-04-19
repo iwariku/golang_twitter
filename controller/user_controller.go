@@ -404,7 +404,7 @@ func (uc *UserController) GetFollowings(c *gin.Context) {
 		return
 	}
 
-	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 3)
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
 		return
@@ -473,7 +473,7 @@ func (uc *UserController) GetFollowers(c *gin.Context) {
 		return
 	}
 
-	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 3)
+	limit, err := utils.ParseQueryInt32WithDefault(c, "limit", 10)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limitの形式が正しくありません"})
 		return
