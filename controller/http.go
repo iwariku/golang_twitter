@@ -12,7 +12,9 @@ type AuthRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// フロントエンド(json)ではidはstringとして扱うため、jsonタグにstringをつける
 type UserResponse struct {
+	ID               int32     `json:"id,string"`
 	UserName         string    `json:"user_name"`
 	SelfIntroduction string    `json:"self_introduction"`
 	DateOfBirth      time.Time `json:"date_of_birth"`
@@ -72,17 +74,9 @@ type FollowResponse struct {
 	IsFollowed  bool  `json:"is_followed"`  // フォローしているか？true/false
 }
 
-type FollowListResponse struct {
-	ID               int32  `json:"id"`
-	UserName         string `json:"user_name"`
-	NickName         string `json:"nick_name"`
-	SelfIntroduction string `json:"self_introduction"`
-	ProfileImage     string `json:"profile_image"`
-}
-
 type PaginatedFollowListResponse struct {
-	FollowList []FollowListResponse `json:"follow_list"`
-	Limit      int32                `json:"limit"`
-	Offset     int32                `json:"offset"`
-	Count      int64                `json:"count"`
+	FollowList []UserResponse `json:"follow_list"`
+	Limit      int32          `json:"limit"`
+	Offset     int32          `json:"offset"`
+	Count      int64          `json:"count"`
 }

@@ -49,6 +49,7 @@ SELECT COUNT(*) FROM tweets;
 -- 「:one」の場合、可読性が高く、パフォーマンスへの影響も少ないことから、サブクエリ形式を選択
 -- name: GetUser :one
 SELECT
+  u.id,
   u.user_name,
   u.self_introduction,
   u.date_of_birth,
@@ -276,7 +277,6 @@ WHERE follower_id = $1;
 SELECT
   u.id,
   u.user_name,
-  u.nick_name,
   u.self_introduction,
   u.profile_image,
   EXISTS (
@@ -303,7 +303,6 @@ WHERE following_id = $1;
 SELECT
   u.id,
   u.user_name,
-  u.nick_name,
   u.self_introduction,
   u.profile_image,
   EXISTS (

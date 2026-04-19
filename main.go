@@ -126,12 +126,12 @@ func main() {
 			c.HTML(http.StatusOK, "groups-messages.html", nil)
 		})
 		authGroup.GET("/api/dm/groups/:id/messages", dc.GetMessagesByGroupID)
-    
-    authGroup.GET("/user/unsubscribe", func(c *gin.Context) {
+
+		authGroup.GET("/user/unsubscribe", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "unsubscribe.html", nil)
 		})
 		authGroup.DELETE("/api/user/unsubscribe", uc.DeleteUser)
-    
+
 	}
 
 	r.Run()
