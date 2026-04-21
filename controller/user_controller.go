@@ -524,3 +524,15 @@ func (uc *UserController) GetFollowers(c *gin.Context) {
 
 	c.JSON(http.StatusOK, paginatedFollowerListRes)
 }
+
+// ログインしているユーザーIDを取得
+func (uc *UserController) GetLoggedUserID(c *gin.Context) {
+	loggedUserId, err := GetUserIDFromContext(c)
+	if err != nil {
+		log.Printf("ログインチェックの失敗: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ログインが必要です"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"loggedUserId": strconv.Itoa(int(loggedUserId))})
+}

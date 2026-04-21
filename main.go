@@ -52,6 +52,9 @@ func main() {
 	authGroup := r.Group("/")
 	authGroup.Use(am.CheckLogin)
 	{
+
+		authGroup.GET("/api/users/me", uc.GetLoggedUserID)
+
 		authGroup.POST("/post", tc.TweetPost)
 
 		authGroup.GET("/home", func(c *gin.Context) {
