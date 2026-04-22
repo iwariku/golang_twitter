@@ -605,6 +605,13 @@ func (tc *TweetController) GetBookmarkedTweetsByUserID(c *gin.Context) {
 		return
 	}
 
+	totalCount, err := tc.Queries.GetBookmarkCountByUserID(c.Request.Context(), loggedUserId)
+	if err != nil {
+		log.Printf("件数の取得に失敗しました")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "件数取得に失敗しました"})
+		return
+	}
+
 	dbTweets, err := tc.Queries.GetBookmarkedTweetsByUserID(c.Request.Context(), db.GetBookmarkedTweetsByUserIDParams{
 		UserID: loggedUserId,
 		Limit:  limit,
@@ -629,14 +636,13 @@ func (tc *TweetController) GetBookmarkedTweetsByUserID(c *gin.Context) {
 		}
 	}
 
-	type BookmarkedTweetResponse struct {
-		Tweets []TweetResponse `json:"tweets"`
-	}
-
-	bookmarkedTweetRes := BookmarkedTweetResponse{
+	paginatedTweetsRes := PaginatedTweetsResponse{
 		Tweets: tweetRes,
+		Limit:  int(limit),
+		Offset: int(offset),
+		Count:  int(totalCount),
 	}
 
-	c.JSON(http.StatusOK, bookmarkedTweetRes)
+	c.JSON(http.StatusOK, paginatedTweetsRes)
 
 }

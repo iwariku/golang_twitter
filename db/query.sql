@@ -74,6 +74,11 @@ SELECT COUNT(*)
 FROM retweets
 WHERE user_id = $1;
 
+-- name: GetBookmarkCountByUserID :one
+SELECT COUNT(*)
+FROM bookmarks
+WHERE user_id =$1;
+
 -- いいね機能
 -- name: CreateLike :exec
 INSERT INTO likes (
