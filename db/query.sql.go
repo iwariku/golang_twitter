@@ -337,6 +337,19 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 	return err
 }
 
+const getBookmarkCountByUserID = `-- name: GetBookmarkCountByUserID :one
+SELECT COUNT(*)
+FROM bookmarks
+WHERE user_id =$1
+`
+
+func (q *Queries) GetBookmarkCountByUserID(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getBookmarkCountByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getBookmarkExists = `-- name: GetBookmarkExists :one
 SELECT EXISTS (
   SELECT 1
