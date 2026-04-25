@@ -77,6 +77,19 @@ func (dc *DmController) AddMemberToGroup(c *gin.Context) {
 		UserID:    req.UserID,
 		DmGroupID: req.GroupID,
 	})
+
+	// エラーメッセージを追加する
+	// targetUserをつける
+	// Likeを持つ == DBにレコードがある
+	// hasdm_group, err := tc.Queries.GetLikeExists(c.Request.Context(), db.GetLikeExistsParams{
+	// 	UserID: targetUserId,
+	// 	dm_gpu: tweetId,
+	// })
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "user_idとdm_gorupidの組み合わせはすでに存在します"})
+	// 	return
+	// }
+
 	if err != nil {
 		log.Printf("DBへの保存に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBへの保存に失敗しました"})
@@ -191,26 +204,24 @@ func (dc *DmController) GetGroups(c *gin.Context) {
 		return
 	}
 
-	type GroupsResponse struct {
-		UserID    int32  `json:"user_id"`
-		DmGroupID int32  `json:"dm_group_id"`
-		Name      string `json:"name"`
+	type GroupResponse struct {
+		ID   int32  `json:"id"`
+		Name string `json:"name"`
 	}
 
-	groupsRes := make([]GroupsResponse, len(dbGroups))
+	groupsRes := make([]GroupResponse, len(dbGroups))
 	for i, g := range dbGroups {
-		groupsRes[i] = GroupsResponse{
-			UserID:    g.UserID,
-			DmGroupID: g.DmGroupID,
-			Name:      g.Name,
+		groupsRes[i] = GroupResponse{
+			ID:   g.ID,
+			Name: g.Name,
 		}
 	}
 
-	type GroupListResponse struct {
-		Groups []GroupsResponse `json:"groups"`
+	type GroupsResponse struct {
+		Groups []GroupResponse `json:"groups"`
 	}
 
-	groupListRes := GroupListResponse{
+	groupListRes := GroupsResponse{
 		Groups: groupsRes,
 	}
 
