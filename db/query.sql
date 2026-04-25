@@ -369,6 +369,7 @@ RETURNING *;
 -- 必要なデータ、誰の:user_id、メッセージか: message どこのグループに所属しているか?: dm_group_id = $1;
 -- name: GetMessagesByGroupID :many
 SELECT
+  id,
   user_id,
   message
 FROM dm_messages

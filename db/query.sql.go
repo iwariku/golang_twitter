@@ -703,6 +703,7 @@ func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (b
 
 const getMessagesByGroupID = `-- name: GetMessagesByGroupID :many
 SELECT
+  id,
   user_id,
   message
 FROM dm_messages
@@ -710,6 +711,7 @@ WHERE dm_group_id = $1
 `
 
 type GetMessagesByGroupIDRow struct {
+	ID      int32  `json:"id"`
 	UserID  int32  `json:"user_id"`
 	Message string `json:"message"`
 }
@@ -725,7 +727,7 @@ func (q *Queries) GetMessagesByGroupID(ctx context.Context, dmGroupID int32) ([]
 	var items []GetMessagesByGroupIDRow
 	for rows.Next() {
 		var i GetMessagesByGroupIDRow
-		if err := rows.Scan(&i.UserID, &i.Message); err != nil {
+		if err := rows.Scan(&i.ID, &i.UserID, &i.Message); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

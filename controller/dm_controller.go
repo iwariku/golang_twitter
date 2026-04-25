@@ -16,6 +16,7 @@ type DmController struct {
 }
 
 type MessageResponse struct {
+	ID      int32  `json:"id"`
 	UserID  int32  `json:"user_id"`
 	Message string `json:"message"`
 }
@@ -145,6 +146,7 @@ func (dc *DmController) CreateMessage(c *gin.Context) {
 	}
 
 	messageRes := MessageResponse{
+		ID:      Message.ID,
 		UserID:  Message.UserID,
 		Message: Message.Message,
 	}
@@ -171,6 +173,7 @@ func (dc *DmController) GetMessagesByGroupID(c *gin.Context) {
 	messagesRes := make([]MessageResponse, len(dbMessages))
 	for i, m := range dbMessages {
 		messagesRes[i] = MessageResponse{
+			ID:      m.ID,
 			UserID:  m.UserID,
 			Message: m.Message,
 		}
