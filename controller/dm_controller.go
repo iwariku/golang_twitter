@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"golang_twitter/db"
 	"golang_twitter/utils"
 	"log"
@@ -74,23 +75,23 @@ func (dc *DmController) AddMemberToGroup(c *gin.Context) {
 		return
 	}
 
-	groupMember, err := dc.Queries.AddMemberToGroup(c.Request.Context(), db.AddMemberToGroupParams{
+	// ユーザーがグループにすでに追加されているかどうかを確認する
+	hasDmGroup, err := dc.Queries.AlreadyAddUserToGroup(c.Request.Context(), db.AlreadyAddUserToGroupParams{
 		UserID:    req.UserID,
 		DmGroupID: req.GroupID,
 	})
 
-	// エラーメッセージを追加する
-	// targetUserをつける
-	// Likeを持つ == DBにレコードがある
-	// hasdm_group, err := tc.Queries.GetLikeExists(c.Request.Context(), db.GetLikeExistsParams{
-	// 	UserID: targetUserId,
-	// 	dm_gpu: tweetId,
-	// })
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "user_idとdm_gorupidの組み合わせはすでに存在します"})
-	// 	return
-	// }
+	if hasDmGroup {
+		log.Printf("ユーザー(ID:%d)は既にグループ(ID:%d)に存在します", req.UserID, req.GroupID)
+		c.JSON(http.StatusConflict, gin.H{"error": "このユーザーは既にグループに追加されています"})
+		return
+	}
+	fmt.Println("入力されたユーザーを追加可能です", hasDmGroup)
 
+	groupMember, err := dc.Queries.AddMemberToGroup(c.Request.Context(), db.AddMemberToGroupParams{
+		UserID:    req.UserID,
+		DmGroupID: req.GroupID,
+	})
 	if err != nil {
 		log.Printf("DBへの保存に失敗しました: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DBへの保存に失敗しました"})
