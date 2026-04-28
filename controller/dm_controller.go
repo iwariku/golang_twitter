@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"golang_twitter/db"
 	"golang_twitter/utils"
 	"log"
@@ -16,6 +17,7 @@ type DmController struct {
 }
 
 type MessageResponse struct {
+	ID      int32  `json:"id"`
 	UserID  int32  `json:"user_id"`
 	Message string `json:"message"`
 }
@@ -72,6 +74,19 @@ func (dc *DmController) AddMemberToGroup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "JSONの形式が違います"})
 		return
 	}
+
+	// ユーザーがグループにすでに追加されているかどうかを確認する
+	hasDmGroup, err := dc.Queries.AlreadyAddUserToGroup(c.Request.Context(), db.AlreadyAddUserToGroupParams{
+		UserID:    req.UserID,
+		DmGroupID: req.GroupID,
+	})
+
+	if hasDmGroup {
+		log.Printf("ユーザー(ID:%d)は既にグループ(ID:%d)に存在します", req.UserID, req.GroupID)
+		c.JSON(http.StatusConflict, gin.H{"error": "このユーザーは既にグループに追加されています"})
+		return
+	}
+	fmt.Println("入力されたユーザーを追加可能です", hasDmGroup)
 
 	groupMember, err := dc.Queries.AddMemberToGroup(c.Request.Context(), db.AddMemberToGroupParams{
 		UserID:    req.UserID,
@@ -132,6 +147,7 @@ func (dc *DmController) CreateMessage(c *gin.Context) {
 	}
 
 	messageRes := MessageResponse{
+		ID:      Message.ID,
 		UserID:  Message.UserID,
 		Message: Message.Message,
 	}
@@ -158,6 +174,7 @@ func (dc *DmController) GetMessagesByGroupID(c *gin.Context) {
 	messagesRes := make([]MessageResponse, len(dbMessages))
 	for i, m := range dbMessages {
 		messagesRes[i] = MessageResponse{
+			ID:      m.ID,
 			UserID:  m.UserID,
 			Message: m.Message,
 		}
@@ -191,26 +208,24 @@ func (dc *DmController) GetGroups(c *gin.Context) {
 		return
 	}
 
-	type GroupsResponse struct {
-		UserID    int32  `json:"user_id"`
-		DmGroupID int32  `json:"dm_group_id"`
-		Name      string `json:"name"`
+	type GroupResponse struct {
+		ID   int32  `json:"id"`
+		Name string `json:"name"`
 	}
 
-	groupsRes := make([]GroupsResponse, len(dbGroups))
+	groupsRes := make([]GroupResponse, len(dbGroups))
 	for i, g := range dbGroups {
-		groupsRes[i] = GroupsResponse{
-			UserID:    g.UserID,
-			DmGroupID: g.DmGroupID,
-			Name:      g.Name,
+		groupsRes[i] = GroupResponse{
+			ID:   g.ID,
+			Name: g.Name,
 		}
 	}
 
-	type GroupListResponse struct {
-		Groups []GroupsResponse `json:"groups"`
+	type GroupsResponse struct {
+		Groups []GroupResponse `json:"groups"`
 	}
 
-	groupListRes := GroupListResponse{
+	groupListRes := GroupsResponse{
 		Groups: groupsRes,
 	}
 

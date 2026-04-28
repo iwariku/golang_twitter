@@ -144,6 +144,13 @@ SELECT EXISTS (
   WHERE user_id = $1 AND tweet_id = $2
 );
 
+-- name: AlreadyAddUserToGroup :one
+SELECT EXISTS (
+  SELECT 1
+  FROM dm_group_members
+  WHERE user_id = $1 AND dm_group_id = $2
+);
+
 -- ツイート詳細、いいね、リツイート、ブックマーク付き
 -- name: GetTweet :one
 SELECT
@@ -362,6 +369,7 @@ RETURNING *;
 -- 必要なデータ、誰の:user_id、メッセージか: message どこのグループに所属しているか?: dm_group_id = $1;
 -- name: GetMessagesByGroupID :many
 SELECT
+  id,
   user_id,
   message
 FROM dm_messages
@@ -371,10 +379,10 @@ WHERE dm_group_id = $1;
 -- WHEREがないと自分の所属しているグループ以外も表示されてしまう。
 -- 別名のエイリアスについて質問する
 -- name: GetGroups :many
-SELECT
-  dm_group_members.user_id,
-  dm_group_members.dm_group_id,
+SELECT 
+  dm_groups.id,
   dm_groups.name
-FROM dm_group_members
-JOIN dm_groups  ON dm_group_members.dm_group_id = dm_groups.id
+FROM dm_groups
+JOIN dm_group_members ON dm_groups.id = dm_group_members.dm_group_id
 WHERE dm_group_members.user_id = $1;
+

@@ -51,6 +51,26 @@ func (q *Queries) AddMemberToGroup(ctx context.Context, arg AddMemberToGroupPara
 	return i, err
 }
 
+const alreadyAddUserToGroup = `-- name: AlreadyAddUserToGroup :one
+SELECT EXISTS (
+  SELECT 1
+  FROM dm_group_members
+  WHERE user_id = $1 AND dm_group_id = $2
+)
+`
+
+type AlreadyAddUserToGroupParams struct {
+	UserID    int32 `json:"user_id"`
+	DmGroupID int32 `json:"dm_group_id"`
+}
+
+func (q *Queries) AlreadyAddUserToGroup(ctx context.Context, arg AlreadyAddUserToGroupParams) (bool, error) {
+	row := q.db.QueryRow(ctx, alreadyAddUserToGroup, arg.UserID, arg.DmGroupID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createBookmark = `-- name: CreateBookmark :exec
 INSERT INTO bookmarks (
   user_id,
@@ -624,19 +644,17 @@ func (q *Queries) GetFollowings(ctx context.Context, arg GetFollowingsParams) ([
 }
 
 const getGroups = `-- name: GetGroups :many
-SELECT
-  dm_group_members.user_id,
-  dm_group_members.dm_group_id,
+SELECT 
+  dm_groups.id,
   dm_groups.name
-FROM dm_group_members
-JOIN dm_groups  ON dm_group_members.dm_group_id = dm_groups.id
+FROM dm_groups
+JOIN dm_group_members ON dm_groups.id = dm_group_members.dm_group_id
 WHERE dm_group_members.user_id = $1
 `
 
 type GetGroupsRow struct {
-	UserID    int32  `json:"user_id"`
-	DmGroupID int32  `json:"dm_group_id"`
-	Name      string `json:"name"`
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
 }
 
 // グループの一覧を参照できるようにする
@@ -651,7 +669,7 @@ func (q *Queries) GetGroups(ctx context.Context, userID int32) ([]GetGroupsRow, 
 	var items []GetGroupsRow
 	for rows.Next() {
 		var i GetGroupsRow
-		if err := rows.Scan(&i.UserID, &i.DmGroupID, &i.Name); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -685,6 +703,7 @@ func (q *Queries) GetLikeExists(ctx context.Context, arg GetLikeExistsParams) (b
 
 const getMessagesByGroupID = `-- name: GetMessagesByGroupID :many
 SELECT
+  id,
   user_id,
   message
 FROM dm_messages
@@ -692,6 +711,7 @@ WHERE dm_group_id = $1
 `
 
 type GetMessagesByGroupIDRow struct {
+	ID      int32  `json:"id"`
 	UserID  int32  `json:"user_id"`
 	Message string `json:"message"`
 }
@@ -707,7 +727,7 @@ func (q *Queries) GetMessagesByGroupID(ctx context.Context, dmGroupID int32) ([]
 	var items []GetMessagesByGroupIDRow
 	for rows.Next() {
 		var i GetMessagesByGroupIDRow
-		if err := rows.Scan(&i.UserID, &i.Message); err != nil {
+		if err := rows.Scan(&i.ID, &i.UserID, &i.Message); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
