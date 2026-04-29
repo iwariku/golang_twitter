@@ -7,18 +7,28 @@ import (
 	"golang_twitter/infrastructure"
 	"golang_twitter/middleware"
 	"golang_twitter/services/auth"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println(".envが読み込めません")
+	}
+
 	ctx := context.Background()
 
 	conn, queries := db.ConnectDB(ctx)
 	defer conn.Close(ctx)
 
-	mailer := auth.NewMailer()
+	// docker-compose.yamlの設定値をprodまたは、devと合わせることで使用できる(片方はコメントアウト済み)
+	mailer := auth.NewProdMailer()
+	// mailer := auth.NewDevMailer()
+
 	redisClient := infrastructure.NewRedisClient()
 	uc := &controller.UserController{Queries: queries, Mailer: mailer, Redis: redisClient}
 	tc := &controller.TweetController{Queries: queries, Redis: redisClient}
