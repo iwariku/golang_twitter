@@ -6,6 +6,7 @@ services:
       POSTGRES_PASSWORD: root
       POSTGRES_DB: twitter_db
       APP_URL: http://localhost:8080
+      FRONT_APP_URL: http://localhost:3000
 
       ENV: prod
       GMAIL_USER:

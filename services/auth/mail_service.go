@@ -58,7 +58,7 @@ func NewProdMailer() *ProdMailer {
 	)
 
 	return &ProdMailer{
-		BaseURL:     utils.GetEnvOrDefault("APP_URL", "http://localhost:8080"),
+		BaseURL:     utils.GetEnvOrDefault("FRONT_APP_URL", "http://localhost:3000"),
 		SMTPAddress: os.Getenv("SMTP_ADDRESS"),
 		FromEmail:   os.Getenv("GMAIL_USER"),
 		GooglePass:  auth,
