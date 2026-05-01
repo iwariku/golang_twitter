@@ -41,22 +41,9 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "OK"})
 	})
 
-	r.LoadHTMLGlob("view/*")
-	r.Static("/static", "./static")
-
-	r.GET("/signup", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "signup.html", nil)
-	})
-	r.POST("/signup", uc.SignUp)
-	r.GET("/login", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "login.html", nil)
-	})
-	r.POST("/login", uc.Login)
-	r.GET("/activate", uc.Activate)
-
-	r.GET("/post", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "post.html", nil)
-	})
+	r.POST("/api/signup", uc.SignUp)
+	r.GET("/api/activate", uc.Activate)
+	r.POST("/api/login", uc.Login)
 
 	// グループを作成し、ミドルウェアを登録。
 	authGroup := r.Group("/")
@@ -65,31 +52,17 @@ func main() {
 
 		authGroup.GET("/api/users/me", uc.GetLoggedUserID)
 
-		authGroup.POST("/post", tc.TweetPost)
+		authGroup.POST("/api/post", tc.TweetPost)
 
-		authGroup.GET("/home", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "home.html", nil)
-		})
 		authGroup.GET("/api/tweets", tc.GetTweets)
 
-		authGroup.GET("/tweet-detail/:id", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "post-detail.html", nil)
-		})
 		authGroup.GET("/api/tweets/:id", tc.GetTweet)
 
-		authGroup.GET("/user-detail/:id", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "user-detail.html", nil)
-		})
 		authGroup.GET("/api/users/:id", uc.GetUser)
 		authGroup.GET("/api/users/:id/tweets", uc.GetTweetsByUserID)
-		authGroup.GET("/user-retweet/:id", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "user-retweet.html", nil)
-		})
+
 		authGroup.GET("/api/users/:id/retweets", tc.GetRetweetedTweetsByUserID)
 
-		authGroup.GET("/user-bookmarks", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "user-bookmarks.html", nil)
-		})
 		authGroup.GET("/api/user/bookmarks", tc.GetBookmarkedTweetsByUserID)
 
 		authGroup.POST("/api/tweets/:id/like", tc.CreateLike)
@@ -104,45 +77,20 @@ func main() {
 		authGroup.POST("/api/users/:id/follow", uc.CreateFollow)
 		authGroup.DELETE("/api/users/:id/follow", uc.DeleteFollow)
 
-		authGroup.GET("/users/:id/followings", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "follows.html", nil)
-		})
 		authGroup.GET("/api/users/:id/followings", uc.GetFollowings)
 
-		authGroup.GET("/users/:id/followers", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "follows.html", nil)
-		})
 		authGroup.GET("/api/users/:id/followers", uc.GetFollowers)
 
-		// --- DM機能 ---
-		authGroup.GET("/dm/group", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "create-group.html", nil)
-		})
 		authGroup.POST("/api/dm/group", dc.CreateGroup)
 
-		authGroup.GET("/dm/groups", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "groups.html", nil)
-		})
 		authGroup.GET("/api/dm/groups", dc.GetGroups)
 
-		authGroup.GET("/dm/add-member", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "add-member.html", nil)
-		})
 		authGroup.POST("/api/dm/add-member", dc.AddMemberToGroup)
 
-		authGroup.GET("dm/groups/:id/message", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "message.html", nil)
-		})
 		authGroup.POST("/api/dm/groups/:id/message", dc.CreateMessage)
 
-		authGroup.GET("/dm/groups/:id/messages", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "groups-messages.html", nil)
-		})
 		authGroup.GET("/api/dm/groups/:id/messages", dc.GetMessagesByGroupID)
 
-		authGroup.GET("/user/unsubscribe", func(c *gin.Context) {
-			c.HTML(http.StatusOK, "unsubscribe.html", nil)
-		})
 		authGroup.DELETE("/api/user/unsubscribe", uc.DeleteUser)
 
 	}
