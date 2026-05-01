@@ -41,9 +41,9 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "OK"})
 	})
 
-	r.POST("/signup", uc.SignUp)
-	r.GET("/activate", uc.Activate)
-	r.POST("/login", uc.Login)
+	r.POST("/api/signup", uc.SignUp)
+	r.GET("/api/activate", uc.Activate)
+	r.POST("/api/login", uc.Login)
 
 	// グループを作成し、ミドルウェアを登録。
 	authGroup := r.Group("/")
@@ -52,7 +52,7 @@ func main() {
 
 		authGroup.GET("/api/users/me", uc.GetLoggedUserID)
 
-		authGroup.POST("/post", tc.TweetPost)
+		authGroup.POST("/api/post", tc.TweetPost)
 
 		authGroup.GET("/api/tweets", tc.GetTweets)
 
