@@ -6,8 +6,17 @@ services:
       POSTGRES_PASSWORD: root
       POSTGRES_DB: twitter_db
       APP_URL: http://localhost:8080
-      SMTP_ADDRESS: mailcatcher:1025
-      MAIL_FROM: noreply@example.com
+      FRONT_APP_URL: http://localhost:3000
+
+      ENV: prod
+      GMAIL_USER:
+      GMAIL_PASS:
+      SMTP_ADDRESS: smtp.gmail.com:587
+
+      # ENV: dev
+      # SMTP_ADDRESS: mailcatcher:1025
+      # MAIL_FROM: noreply@example.com
+
       REDIS_ADDRESS: redis_server:6379
     ports:
       - '8080:8080'

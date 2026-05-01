@@ -1,6 +1,9 @@
 # OS
 .DS_Store
 
+# project
+.env
+
 # Air / build artifacts
 tmp/
 
