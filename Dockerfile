@@ -12,8 +12,6 @@ RUN go mod download
 # ソースコピー
 COPY . .
 
-RUN go mod tidy
-
 # ビルド
 RUN go build -o app ./main.go
 
