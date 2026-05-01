@@ -15,7 +15,7 @@ COPY . .
 RUN go mod tidy
 
 # ビルド
-RUN go build -o app .
+RUN go build -o app ./main.go
 
 # 実行
 CMD ["./app"]
