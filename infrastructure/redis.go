@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+
 	"github.com/iwariku/golang_twitter/utils"
 
 	"github.com/redis/go-redis/v9"
