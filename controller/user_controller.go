@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"golang_twitter/db"
-	"golang_twitter/services/auth"
-	"golang_twitter/utils"
+	"github.com/iwariku/golang_twitter/db"
+	"github.com/iwariku/golang_twitter/services/auth"
+	"github.com/iwariku/golang_twitter/utils"
 	"log"
 	"net/http"
 	"strconv"

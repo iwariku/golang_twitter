@@ -2,7 +2,7 @@ package auth
 
 import (
 	"fmt"
-	"golang_twitter/utils"
+	"github.com/iwariku/golang_twitter/utils"
 	"net/smtp"
 	"os"
 )

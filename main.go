@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"golang_twitter/controller"
-	"golang_twitter/db"
-	"golang_twitter/infrastructure"
-	"golang_twitter/middleware"
-	"golang_twitter/services/auth"
+	"github.com/iwariku/golang_twitter/controller"
+	"github.com/iwariku/golang_twitter/db"
+	"github.com/iwariku/golang_twitter/infrastructure"
+	"github.com/iwariku/golang_twitter/middleware"
+	"github.com/iwariku/golang_twitter/services/auth"
 	"log"
 	"net/http"
 	"os"

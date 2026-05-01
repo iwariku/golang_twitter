@@ -1,4 +1,4 @@
-module golang_twitter
+module github.com/iwariku/golang_twitter
 
 go 1.25.5
 
