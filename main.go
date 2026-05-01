@@ -9,6 +9,7 @@ import (
 	"golang_twitter/services/auth"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -95,5 +96,9 @@ func main() {
 
 	}
 
-	r.Run()
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	r.Run(":" + port)
 }

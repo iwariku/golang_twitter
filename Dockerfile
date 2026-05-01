@@ -1,13 +1,17 @@
 FROM golang:1.25.5
+
 WORKDIR /app
 
+# 依存関係
 # Dockerのキャッシュを利用し、buildを早くする。そのため依存関係のファイルのみコピー
 COPY go.mod go.sum ./
-
 RUN go mod download
 
-RUN go install github.com/air-verse/air@latest
-RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.24.0
-
+# ソースコピー
 COPY . .
-CMD ["air", "-c", ".air.toml"]
+
+# ビルド
+RUN go build -o app .
+
+# 実行
+CMD ["./app"]
