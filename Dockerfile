@@ -12,8 +12,10 @@ RUN go mod download
 # ソースコピー
 COPY . .
 
+RUN go list ./...
+
 # ビルド
-RUN go build -o app ./main.go
+RUN go build -o app main.go
 
 # 実行
 CMD ["./app"]
