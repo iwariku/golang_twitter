@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
-	"golang_twitter/controller"
-	"golang_twitter/db"
-	"golang_twitter/infrastructure"
-	"golang_twitter/middleware"
-	"golang_twitter/services/auth"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
+	"github.com/iwariku/golang_twitter/controller"
+	"github.com/iwariku/golang_twitter/db"
+	"github.com/iwariku/golang_twitter/infrastructure"
+	"github.com/iwariku/golang_twitter/middleware"
+	"github.com/iwariku/golang_twitter/services/auth"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -36,6 +40,19 @@ func main() {
 	am := &middleware.AuthMiddleware{Redis: redisClient}
 
 	r := gin.Default()
+
+	frontAppUrl := os.Getenv("FRONT_APP_URL")
+
+	// Or customize CORS settings
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{frontAppUrl},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	r.GET("/health_check", func(c *gin.Context) {
 		// JSONレスポンスを返す
 		c.JSON(http.StatusOK, gin.H{"message": "OK"})
@@ -95,5 +112,9 @@ func main() {
 
 	}
 
-	r.Run()
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	r.Run(":" + port)
 }

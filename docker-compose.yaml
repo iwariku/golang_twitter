@@ -1,6 +1,8 @@
 services:
   gin:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root

@@ -1,0 +1,14 @@
+.git
+.gitignore
+
+# 開発用
+Dockerfile.dev
+docker-compose.yaml
+tmp/*
+
+# ローカル設定
+.env
+
+# その他不要
+node_modules
+*.log
