@@ -4,6 +4,9 @@
 
 フロントエンド（Next.js）と分離した API 専用構成で設計・実装しており、 認証・投稿など、SNS に必要な主要機能を網羅しています。
 
+## URL
+https://twitter-nextjs-frontend.vercel.app/
+
 ## 使用技術
 
 - Go 1.25.5
@@ -54,9 +57,6 @@
 
 ## ER図
 <img width="1882" height="667" alt="image" src="https://github.com/user-attachments/assets/5dc11a3c-c8ad-4ff9-9c8c-747f1f0bede0" />
-
-## URL
-https://twitter-nextjs-frontend.vercel.app/
 
 ## 画面
 #### サインアップ画面
