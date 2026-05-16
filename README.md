@@ -62,23 +62,19 @@ https://twitter-nextjs-frontend.vercel.app/
 
 ## 画面
 
-#### サインアップ画面
+#### サインアップ
 
 ![Signup](./images/signup.png)
 
-#### メール受信画面(Gmail)
+#### メール受信(Gmail)
 
 ![Email Sent](./images/email-sent.png)
 
-#### メールのリンククリック後
-
-![Create Tweet](./images/create-tweet.png)
-
-#### ログイン画面
+#### ログイン
 
 ![Login](./images/login.png)
 
-#### ツイート画面
+#### ツイート投稿
 
 ![Create Tweet](./images/create-tweet.png)
 
@@ -94,15 +90,15 @@ https://twitter-nextjs-frontend.vercel.app/
 
 ![User Detail](./images/user-detail.png)
 
-#### いいね・リツイート・ブックマーク
+#### いいね・リツイート・ブックマーク(動画)
 
 ![Likes Retweets Bookmarks](./images/likes-retweets-bookmarks.gif)
 
-#### ブックマーク一覧
+#### ブックマークしたツイート一覧
 
 ![Bookmarked Tweets](./images/bookmarked-tweets.png)
 
-#### フォロー・フォロー解除
+#### フォロー・フォロー解除(動画)
 
 ![Follow Unfollow](./images/follow-unfollow.gif)
 
@@ -118,7 +114,7 @@ https://twitter-nextjs-frontend.vercel.app/
 
 ![Create Group](./images/create-group.png)
 
-#### ユーザー追加
+#### グループにユーザーを追加
 
 ![Add Member](./images/add-member.png)
 
@@ -130,7 +126,7 @@ https://twitter-nextjs-frontend.vercel.app/
 
 ![Message List](./images/message-list.png)
 
-#### 退会
+#### 退会(動画)
 
 ![Account Deletion](./images/account-deletion.gif)
 
