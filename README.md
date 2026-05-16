@@ -57,62 +57,80 @@ https://twitter-nextjs-frontend.vercel.app/
   → 既存の知識を活かし、スムーズに開発できると考えた
 
 ## ER図
-<img width="1882" height="667" alt="image" src="https://github.com/user-attachments/assets/5dc11a3c-c8ad-4ff9-9c8c-747f1f0bede0" />
+
+![ER図](./images/er-diagram.png)
 
 ## 画面
+
 #### サインアップ画面
 
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 21 16 31" src="https://github.com/user-attachments/assets/d66c068a-6ee5-4882-88da-daca754c2129" />
+![Signup](./images/signup.png)
 
 #### メール受信画面(Gmail)
-<img width="715" height="334" alt="スクリーンショット 2026-05-05 21 34 14" src="https://github.com/user-attachments/assets/275ae217-f129-450d-90ee-12b833002910" />
+
+![Email Sent](./images/email-sent.png)
 
 #### メールのリンククリック後
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/0a67658d-e59f-43de-bbfd-46d6a778488f" />
+
+![Create Tweet](./images/create-tweet.png)
 
 #### ログイン画面
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 21 32 42" src="https://github.com/user-attachments/assets/25a53d1c-b6f1-40ac-bbbe-80c4fc7c91e3" />
+
+![Login](./images/login.png)
 
 #### ツイート画面
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 21 37 44" src="https://github.com/user-attachments/assets/0ebaabce-3612-49eb-8ed7-403c5703dfc4" />
 
-#### ツイート覧
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 21 42 24" src="https://github.com/user-attachments/assets/aff7df7c-bd75-49fd-9080-988d5f52ad93" />
+![Create Tweet](./images/create-tweet.png)
+
+#### ツイート一覧
+
+![Tweet List](./images/tweet-list.png)
 
 #### ツイート詳細
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 21 53 03" src="https://github.com/user-attachments/assets/28ef772c-9379-4d59-9b27-1b2e2e650f65" />
+
+![Tweet Detail](./images/tweet-detail.png)
 
 #### ユーザー詳細
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 21 49 36" src="https://github.com/user-attachments/assets/45a2daf5-810c-4900-9a73-d95be8b3e42a" />
 
-#### いいね・リツイート・ブックマーク(動画)
-https://github.com/user-attachments/assets/51090866-61c3-4132-8369-162a7b508353
+![User Detail](./images/user-detail.png)
+
+#### いいね・リツイート・ブックマーク
+
+![Likes Retweets Bookmarks](./images/likes-retweets-bookmarks.gif)
 
 #### ブックマーク一覧
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 21 52 04" src="https://github.com/user-attachments/assets/0386bdf1-7b8d-4a51-80da-e24e81ea198f" />
 
-#### フォロー・フォロー解除(動画)
-https://github.com/user-attachments/assets/c1697832-2723-404c-ade0-9acd3b587a66
+![Bookmarked Tweets](./images/bookmarked-tweets.png)
+
+#### フォロー・フォロー解除
+
+![Follow Unfollow](./images/follow-unfollow.gif)
 
 #### フォロー一覧
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 22 42 57" src="https://github.com/user-attachments/assets/658815b6-321b-40bb-b96d-f068b2e87390" />
+
+![Following List](./images/following-list.png)
 
 #### フォロワー一覧
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 22 42 57" src="https://github.com/user-attachments/assets/ba93ee4b-4584-4ed3-9f62-23551256d7ea" />
+
+![Follower List](./images/follower-list.png)
 
 #### グループ作成
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 22 46 32" src="https://github.com/user-attachments/assets/058995d1-afb6-4239-8fa3-db30fcccf3bb" />
+
+![Create Group](./images/create-group.png)
 
 #### ユーザー追加
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 22 48 00" src="https://github.com/user-attachments/assets/4cb5b737-bc8c-4c14-89ca-3b68bfb1eadf" />
+
+![Add Member](./images/add-member.png)
 
 #### グループ一覧
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 22 49 17" src="https://github.com/user-attachments/assets/45bf4d6f-5833-4029-888c-a310d6289d08" />
+
+![Group List](./images/group-list.png)
 
 #### メッセージ一覧
-<img width="1920" height="1080" alt="スクリーンショット 2026-05-05 23 05 44" src="https://github.com/user-attachments/assets/ea73b83e-6c72-4c22-8f7d-a9b33f44c774" />
 
-#### 退会(動画)
-https://github.com/user-attachments/assets/e22fab7d-ab4c-4882-b5b7-10f9772d9ccd
+![Message List](./images/message-list.png)
 
+#### 退会
+
+![Account Deletion](./images/account-deletion.gif)
 
