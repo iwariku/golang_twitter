@@ -45,11 +45,11 @@ func (m *DevMailer) SendActivationEmail(toMail string, token string) error {
 
 // 本番環境用
 type ProdMailer struct {
-	BaseURL    string
-	SMTPHost   string
-	SMTPPort   string
-	FromEmail  string
-	GooglePass smtp.Auth //Gmailを使うため
+	BaseURL   string
+	SMTPHost  string
+	SMTPPort  string
+	FromEmail string
+	SMTPAuth  smtp.Auth
 }
 
 // NewMailerは設定をするだけ
@@ -63,13 +63,12 @@ func NewProdMailer() *ProdMailer {
 	)
 
 	return &ProdMailer{
-		BaseURL:    utils.GetEnvOrDefault("FRONT_APP_URL", "http://localhost:3000"),
-		SMTPHost:   os.Getenv("SMTP_HOST"),
-		SMTPPort:   os.Getenv("SMTP_PORT"),
-		FromEmail:  os.Getenv("FROM_EMAIL"),
-		GooglePass: auth,
+		BaseURL:   utils.GetEnvOrDefault("FRONT_APP_URL", "http://localhost:3000"),
+		SMTPHost:  os.Getenv("SMTP_HOST"),
+		SMTPPort:  os.Getenv("SMTP_PORT"),
+		FromEmail: os.Getenv("FROM_EMAIL"),
+		SMTPAuth:  auth,
 	}
-
 }
 
 func (m *ProdMailer) SendActivationEmail(toMail string, token string) error {
@@ -85,5 +84,5 @@ func (m *ProdMailer) SendActivationEmail(toMail string, token string) error {
 	msg := []byte(subject + mime + body)
 
 	return smtp.SendMail(
-		net.JoinHostPort(m.SMTPHost, m.SMTPPort), m.GooglePass, m.FromEmail, []string{toMail}, msg)
+		net.JoinHostPort(m.SMTPHost, m.SMTPPort), m.SMTPAuth, m.FromEmail, []string{toMail}, msg)
 }
