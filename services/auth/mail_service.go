@@ -2,9 +2,11 @@ package auth
 
 import (
 	"fmt"
-	"github.com/iwariku/golang_twitter/utils"
+	"net"
 	"net/smtp"
 	"os"
+
+	"github.com/iwariku/golang_twitter/utils"
 )
 
 type MailerInterface interface {
@@ -13,17 +15,19 @@ type MailerInterface interface {
 
 // docker環境用
 type DevMailer struct {
-	BaseURL     string
-	SMTPAddress string
-	FromEmail   string
+	BaseURL   string
+	SMTPHost  string
+	SMTPPort  string
+	FromEmail string
 }
 
 // NewDevMailerは設定をするだけ
 func NewDevMailer() *DevMailer {
 	return &DevMailer{
-		BaseURL:     utils.GetEnvOrDefault("APP_URL", "http://localhost:8080"),
-		SMTPAddress: utils.GetEnvOrDefault("SMTP_ADDRESS", "mailcatcher:1025"),
-		FromEmail:   utils.GetEnvOrDefault("MAIL_FROM", "noreply@example.com"),
+		BaseURL:   utils.GetEnvOrDefault("APP_URL", "http://localhost:8080"),
+		SMTPHost:  utils.GetEnvOrDefault("SMTP_HOST", "mailcatcher"),
+		SMTPPort:  utils.GetEnvOrDefault("SMTP_PORT", "1025"),
+		FromEmail: utils.GetEnvOrDefault("FROM_EMAIL", "noreply@example.com"),
 	}
 }
 
@@ -36,15 +40,16 @@ func (m *DevMailer) SendActivationEmail(toMail string, token string) error {
 	msg := []byte(subject + mime + body)
 
 	// SMTPを使って送信する
-	return smtp.SendMail(m.SMTPAddress, nil, m.FromEmail, []string{toMail}, msg)
+	return smtp.SendMail(net.JoinHostPort(m.SMTPHost, m.SMTPPort), nil, m.FromEmail, []string{toMail}, msg)
 }
 
 // 本番環境用
 type ProdMailer struct {
-	BaseURL     string
-	SMTPAddress string
-	FromEmail   string
-	GooglePass  smtp.Auth //Gmailを使うため
+	BaseURL    string
+	SMTPHost   string
+	SMTPPort   string
+	FromEmail  string
+	GooglePass smtp.Auth //Gmailを使うため
 }
 
 // NewMailerは設定をするだけ
@@ -52,16 +57,17 @@ func NewProdMailer() *ProdMailer {
 
 	auth := smtp.PlainAuth(
 		"",
-		os.Getenv("GMAIL_USER"),
-		os.Getenv("GMAIL_PASS"),
-		"smtp.gmail.com",
+		os.Getenv("SMTP_USER"),
+		os.Getenv("SMTP_PASS"),
+		os.Getenv("SMTP_HOST"),
 	)
 
 	return &ProdMailer{
-		BaseURL:     utils.GetEnvOrDefault("FRONT_APP_URL", "http://localhost:3000"),
-		SMTPAddress: os.Getenv("SMTP_ADDRESS"),
-		FromEmail:   os.Getenv("GMAIL_USER"),
-		GooglePass:  auth,
+		BaseURL:    utils.GetEnvOrDefault("FRONT_APP_URL", "http://localhost:3000"),
+		SMTPHost:   os.Getenv("SMTP_HOST"),
+		SMTPPort:   os.Getenv("SMTP_PORT"),
+		FromEmail:  os.Getenv("FROM_EMAIL"),
+		GooglePass: auth,
 	}
 
 }
@@ -79,5 +85,5 @@ func (m *ProdMailer) SendActivationEmail(toMail string, token string) error {
 	msg := []byte(subject + mime + body)
 
 	return smtp.SendMail(
-		m.SMTPAddress, m.GooglePass, m.FromEmail, []string{toMail}, msg)
+		net.JoinHostPort(m.SMTPHost, m.SMTPPort), m.GooglePass, m.FromEmail, []string{toMail}, msg)
 }
