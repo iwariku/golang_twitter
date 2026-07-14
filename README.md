@@ -9,14 +9,22 @@ https://twitter-nextjs-frontend.vercel.app/
 
 ## 使用技術
 
+### バックエンド
 - Go 1.25.5
 - Gin 1.12.0
-- PostgreSQL 14（Render）
-- sqlc 1.24.0 （SQLから型安全なGoコードを生成）
-- Redis（Render managed Redis）
+- sqlc 1.24.0（SQLから型安全なGoコードを生成）
+
+### データベース・キャッシュ
+- PostgreSQL 14
+- Redis
+
+### インフラ・クラウド
 - Docker
-- Air（Goアプリの開発効率向上）
-- Gmail SMTP(Gmail送信)
+- AWS（ECS、RDS for PostgreSQL、ElastiCache for Redis、S3、ALB、SES、Route 53、ACM）
+
+### その他
+- Air（Goアプリのホットリロード）
+- Gmail SMTP（メール送信）
 
 ## 機能一覧
 
@@ -59,6 +67,11 @@ https://twitter-nextjs-frontend.vercel.app/
 ## ER図
 
 ![ER図](./images/er-diagram.png)
+
+## AWS設計図
+
+<img width="700" height="789" alt="スクリーンショット 2026-07-14 14 59 56" src="https://github.com/user-attachments/assets/91b027c6-7cec-4166-aa72-2acd23a3c08d" />
+
 
 ## 画面
 
