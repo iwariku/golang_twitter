@@ -70,8 +70,12 @@ https://twitter-nextjs-frontend.vercel.app/
 
 ## AWS設計図
 
-<img width="700" height="789" alt="スクリーンショット 2026-07-14 14 59 56" src="https://github.com/user-attachments/assets/91b027c6-7cec-4166-aa72-2acd23a3c08d" />
+### AWS構築の記事
+https://qiita.com/Rikuto-Iwashita/items/8dd956722c61e5cab97e
 
+<br>
+
+<img width="689" height="773" alt="RedisNodeType" src="https://github.com/user-attachments/assets/7eccb87b-62b0-4e62-a808-c391860ecee4" />
 
 ## 画面
 
