@@ -91,6 +91,56 @@ jobs:
           container-name: x-clone
           image: ${{ env.DOCKER_IMAGE_URI }}
 
+      # 新コードをデプロイする前にDBスキーマを最新化する。
+      # 先に流さないと、新コードがまだ存在しないテーブルやカラムを参照して起動時に壊れるため、Deployの前に置く。
+      # AWS公式にmigrate（単発タスク）用のアクションが無いため、runでaws CLIを直接叩く方を採択。
+      - name: Run migrations
+        env:
+          RENDERED_ECS_TASK_DEFINITION: ${{ steps.render-task-definition.outputs.task-definition }}
+        run: |
+          # run-taskは登録済みのタスク定義(ARN)しか受け取れない。renderの出力は未登録の
+          # JSONファイルなので、ここで登録してARNに変換する。
+          REGISTERED_TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "file://$RENDERED_ECS_TASK_DEFINITION" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+
+          NETWORK_CONFIG=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query 'services[0].networkConfiguration' --output json)
+
+          MIGRATE_TASK_ARN=$(aws ecs run-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task-definition "$REGISTERED_TASK_DEF_ARN" \
+            --launch-type FARGATE \
+            --network-configuration "$NETWORK_CONFIG" \
+            --overrides '{
+              "containerOverrides": [{
+                "name": "x-clone",
+                "command": ["./migrate"]
+              }]
+            }' \
+            --query 'tasks[0].taskArn' --output text)
+
+          echo "migrate task started: $MIGRATE_TASK_ARN"
+
+          aws ecs wait tasks-stopped \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks "$MIGRATE_TASK_ARN"
+
+          # タスクは成功でも失敗でも停止するため、停止しただけでは成否が分からない。
+          # exit codeを見て、0以外なら失敗させてDeployに進ませない。
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks "$MIGRATE_TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+
+          echo "migrate exit code: $EXIT_CODE"
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "マイグレーションに失敗しました"
+            exit 1
+          fi
+
       - name: Deploy ECS task
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
